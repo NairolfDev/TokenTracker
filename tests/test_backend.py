@@ -340,8 +340,11 @@ class ManagerTests(unittest.TestCase):
     def test_background_refresh_never_launches_a_closed_browser(self):
         with tempfile.TemporaryDirectory() as directory:
             browsers = BrowserSessions(Path(directory))
+            for provider_id in ("claude", "gemini_chat"):
+                (Path(directory) / provider_id / "Default").mkdir(parents=True)
             with patch.object(browsers, "_open", side_effect=AssertionError("Background browser opened")):
                 self.assertEqual(browsers.check("claude", refresh=True).status, "paused")
+                self.assertEqual(browsers.check("gemini_chat", refresh=True).status, "paused")
                 self.assertEqual(browsers.check("chatgpt", login_poll=True).status, "closed")
 
 

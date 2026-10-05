@@ -151,24 +151,11 @@ def run():
             print("Browser test: expired auth rejected", flush=True)
             Fixture.usage_status = 200
             sessions.close("claude")
-            open_native = sessions._open
-            minimized = []
-            def record_reader(*args, **kwargs):
-                reader = open_native(*args, **kwargs)
-                cdp = reader.context.new_cdp_session(reader.page)
-                try:
-                    minimized.append(cdp.send('Browser.getWindowForTarget')['bounds']['windowState'])
-                finally:
-                    cdp.detach()
-                assert reader.page.evaluate('navigator.webdriver') is False
-                assert reader.background and not reader.headless
-                return reader
-            with patch.object(sessions, '_open', side_effect=record_reader):
+            with patch('browser_sessions.subprocess.Popen', side_effect=AssertionError('Automatic refresh launched Chrome')):
                 closed_profile = sessions.check('claude', refresh=True)
-            assert closed_profile.authenticated and closed_profile.progress == .20, closed_profile
-            assert minimized == ['minimized'], minimized
-            assert 'claude' not in sessions.sessions, 'A temporary minimized reader must close after the measurement'
-            print('Browser test: stored login read with normal minimized Chrome; reader closed', flush=True)
+            assert closed_profile.status == 'paused', closed_profile
+            assert 'claude' not in sessions.sessions, 'Automatic refresh must leave a closed saved profile closed'
+            print('Browser test: stored login stays closed during automatic refresh', flush=True)
             session = sessions._open("claude")
             assert any(c["name"] == "sessionKey" for c in session.context.cookies()), "Profile must persist login cookies"
             sessions.open_login("claude")
@@ -223,10 +210,11 @@ def run():
             modern_refresh = sessions.check('gemini_chat', refresh=True)
             assert [w.remaining_percent for w in modern_refresh.windows] == [75, 55], modern_refresh
             sessions.close('gemini_chat')
-            modern_closed = sessions.check('gemini_chat', refresh=True)
-            assert [w.remaining_percent for w in modern_closed.windows] == [75, 55], modern_closed
-            assert 'gemini_chat' not in sessions.sessions, 'The owned minimized Gemini reader must close'
-            print('Browser test: real-style Gemini page, hidden account copy, delayed data, German resets, fresh/closed browser reads verified', flush=True)
+            with patch('browser_sessions.subprocess.Popen', side_effect=AssertionError('Automatic refresh launched Chrome')):
+                modern_closed = sessions.check('gemini_chat', refresh=True)
+            assert modern_closed.status == 'paused', modern_closed
+            assert 'gemini_chat' not in sessions.sessions, 'Automatic refresh must leave Gemini closed'
+            print('Browser test: real-style Gemini page, hidden account copy, delayed data, German resets, closed browser stays closed', flush=True)
 
             PROVIDERS['chatgpt'] = replace(original_chatgpt, url=fixture_base + '/login', domains=('127.0.0.1',), session_cookies=('fixture-session',))
             sessions.open_login('chatgpt')
@@ -276,7 +264,7 @@ def run():
             assert not (sessions.profile_root / "claude").exists(), "Disconnect must remove only this profile"
             with patch.object(sessions, '_open', side_effect=AssertionError('Background browser opened')):
                 assert sessions.check('chatgpt', refresh=True).status == 'paused'
-            print("Browser smoke: passed (normal Chrome, background quotas, multi-tab login, SPA navigation, response races, stored session, guest/expired/closed rejection, unchanged redirects, persistence, disconnect)")
+            print("Browser smoke: passed (normal Chrome, background tabs, multi-tab login, SPA navigation, response races, stored session, guest/expired/closed rejection, unchanged redirects, persistence, disconnect)")
         finally:
             sessions.shutdown()
             PROVIDERS["claude"] = original

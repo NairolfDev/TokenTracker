@@ -116,7 +116,6 @@ class Session:
     requests: dict = field(default_factory=dict)
     sequence: int = 0
     usage_page: object = None
-    background: bool = False
 
 
 class BrowserSessions:
@@ -149,10 +148,10 @@ class BrowserSessions:
             pass
         return None
 
-    def _open(self, provider_id, visible=True, allow_launch=True):
+    def _open(self, provider_id, allow_launch=True):
         existing = self.sessions.get(provider_id)
         if existing and existing.browser.is_connected():
-            if visible and (existing.headless or existing.background):
+            if existing.headless:
                 self.close(provider_id)
             else:
                 return existing
@@ -173,14 +172,7 @@ class BrowserSessions:
                     "--remote-debugging-address=127.0.0.1", "--no-first-run", "--no-default-browser-check",
                     "--window-size=1180,860", "--new-window"]
             args.append("about:blank")
-            startup = None
-            if not visible:
-                args.insert(-1, '--start-minimized')
-                if os.name == 'nt':
-                    startup = subprocess.STARTUPINFO()
-                    startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                    startup.wShowWindow = 0  # Keep the new reader hidden until CDP minimizes it.
-            process = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, startupinfo=startup)
+            process = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             deadline = time.monotonic() + 20
             while time.monotonic() < deadline:
                 try:
@@ -214,18 +206,7 @@ class BrowserSessions:
             version = browser.new_browser_cdp_session().send("Browser.getVersion")
             headless = "HeadlessChrome" in version.get("userAgent", "")
             session = Session(browser, context, page, headless, process)
-            session.background = process is not None and not visible
             self.sessions[provider_id] = session
-            if session.background:
-                cdp = context.new_cdp_session(page)
-                try:
-                    window = cdp.send('Browser.getWindowForTarget')
-                    # Installed Chrome can ignore the startup show-state. Apply
-                    # the state to this reader's exact window before loading data.
-                    cdp.send('Browser.setWindowBounds', {'windowId': window['windowId'],
-                                                        'bounds': {'windowState': 'minimized'}})
-                finally:
-                    cdp.detach()
             def watch_page(owner):
                 owner.set_default_timeout(3000)
                 owner.on("close", lambda: session.evidence.pop(owner, None))
@@ -286,7 +267,7 @@ class BrowserSessions:
                 self.close(provider_id)
                 if process is not None:
                     raise BrowserError("Der Browser wurde im Automationsmodus gestartet. Bitte Chrome oder Edge aktualisieren und erneut anmelden.")
-                return self._open(provider_id, visible=True)
+                return self._open(provider_id)
             return session
         except BrowserError:
             raise
@@ -295,7 +276,7 @@ class BrowserSessions:
 
     def open_login(self, provider_id):
         existing = self.sessions.get(provider_id)
-        session = self._open(provider_id, visible=True)
+        session = self._open(provider_id)
         if session.page.is_closed():
             session.page = session.context.new_page()
         # Reopening a live login never replaces its redirects, verification form,
@@ -308,7 +289,6 @@ class BrowserSessions:
 
     def check(self, provider_id, refresh=False, login_poll=False, manual=False):
         provider = PROVIDERS[provider_id]
-        background_started = False
         try:
             session = self.sessions.get(provider_id)
             if (not login_poll and not session and self._endpoint(self.profile_root / provider_id)):
@@ -321,18 +301,7 @@ class BrowserSessions:
                 if login_poll:
                     return ProviderStats("closed", "Login-Fenster geschlossen", detail="Die Anmeldung wurde beendet. Über »Anmelden« erneut öffnen.")
                 if not manual:
-                    if provider_id in ('claude', 'gemini_chat') and (self.profile_root / provider_id / 'Default').is_dir():
-                        session = self._open(provider_id, visible=False)
-                        background_started = session.background
-                        if session.background:
-                            session.page.goto(provider.url, wait_until='domcontentloaded', timeout=15000)
-                            if provider_id == 'claude':
-                                session.usage_page = session.page
-                                result = self._wait_claude_quota(session, session.page, empty_quota('Claude-Abo'))
-                                if result.authenticated and any(w.used_percent is not None for w in result.windows):
-                                    return result
-                    else:
-                        return ProviderStats("paused", "Browser geschlossen", "Abruf pausiert", detail="Die Anmeldung bleibt gespeichert. »Prüfen« öffnet das Anbieter-Fenster und lädt die Abo-Limits.")
+                    return ProviderStats("paused", "Browser geschlossen", "Abruf pausiert", detail="Die Anmeldung bleibt gespeichert. »Prüfen« öffnet das Anbieter-Fenster und lädt die Abo-Limits.")
                 else:
                     self.open_login(provider_id)
                     session = self.sessions[provider_id]
@@ -340,11 +309,6 @@ class BrowserSessions:
             # tab. Inspect every product tab, keeping their evidence separate.
             pages = [p for p in reversed(session.context.pages) if not p.is_closed()
                      and host_allowed(p.url, ((urlsplit(provider.url).hostname or "").removeprefix("www."),))]
-            if background_started and session.page in pages:
-                # Saved profiles may restore old tabs. Read the freshly loaded
-                # usage document before any restored conversation.
-                pages.remove(session.page)
-                pages.insert(0, session.page)
             if not pages:
                 return ProviderStats("pending", "Anmeldung läuft", detail="Die Anmeldung im Anbieter-Browser abschließen.")
             results = []
@@ -364,21 +328,6 @@ class BrowserSessions:
             return ProviderStats("error", "Browser nicht bereit", detail=str(error))
         except Exception:
             return ProviderStats("error", "Browser-Abruf fehlgeschlagen", detail="Das Anbieter-Fenster öffnen und die Verbindung erneut prüfen.")
-        finally:
-            if background_started:
-                try:
-                    # A reader that the user restored becomes their visible session.
-                    cdp = session.context.new_cdp_session(session.page)
-                    try:
-                        minimized = cdp.send('Browser.getWindowForTarget').get('bounds', {}).get('windowState') == 'minimized'
-                    finally:
-                        cdp.detach()
-                    if minimized:
-                        self.close(provider_id)
-                    else:
-                        session.background = False
-                except Exception:
-                    pass
 
     def _check_page(self, provider_id, session, page, login_poll):
         provider = PROVIDERS[provider_id]
@@ -448,7 +397,7 @@ class BrowserSessions:
         """Load the original usage page in a background tab only after verified login."""
         try:
             if urlsplit(account_page.url).path.rstrip("/") == "/settings/usage":
-                if refresh and account_page is session.usage_page and not session.background:
+                if refresh and account_page is session.usage_page:
                     account_page.reload(wait_until="domcontentloaded", timeout=15000)
                     confirmed = self._check_page("claude", session, account_page, False)
                 return self._wait_claude_quota(session, account_page, confirmed)
@@ -512,17 +461,14 @@ class BrowserSessions:
         try:
             page = session.usage_page
             if page is None or page.is_closed():
-                if session.background:
-                    page = session.page
-                else:
-                    cdp = session.browser.new_browser_cdp_session()
-                    try:
-                        with session.context.expect_page(timeout=5000) as created:
-                            cdp.send('Target.createTarget', {'url': 'about:blank', 'background': True})
-                        page = created.value
-                    finally:
-                        cdp.detach()
-                    page.goto(PROVIDERS['gemini_chat'].url, wait_until='domcontentloaded', timeout=15000)
+                cdp = session.browser.new_browser_cdp_session()
+                try:
+                    with session.context.expect_page(timeout=5000) as created:
+                        cdp.send('Target.createTarget', {'url': 'about:blank', 'background': True})
+                    page = created.value
+                finally:
+                    cdp.detach()
+                page.goto(PROVIDERS['gemini_chat'].url, wait_until='domcontentloaded', timeout=15000)
                 session.usage_page = page
                 page.set_default_timeout(3000)
             elif refresh:
