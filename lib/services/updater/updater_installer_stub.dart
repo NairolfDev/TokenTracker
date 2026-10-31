@@ -6,7 +6,7 @@ class UpdaterInstaller {
   static String get currentPlatformAssetKeyword => 'web';
 
   static List<String> get preferredAssetNames => const [
-        'AgentAmpel-web.zip',
+        'AgentLights-web.zip',
       ];
 
   static Future<bool> downloadAndApplyUpdate({

@@ -56,7 +56,7 @@ class HookInstallerService {
     }
   }
 
-  /// Non-destructively merges `agent_ampel` hook definitions into an existing configuration map.
+  /// Non-destructively merges `agentlights` hook definitions into an existing configuration map.
   /// Preserves all existing top-level keys, existing hook categories, and non-ampel hook commands.
   static Map<String, dynamic> mergeHooksIntoConfig(
     Map<String, dynamic> existing, {
@@ -259,6 +259,85 @@ class HookInstallerService {
     }
   }
 
+  static const String _statuslineMarker = 'agent-lights-statusline';
+
+  // Claude Code feeds its status-line command a JSON payload with the account's real `rate_limits`.
+  // The wrapper saves that payload for the app and then runs the user's previous status line unchanged.
+  static const String _statuslineScriptWindows = r'''
+$in = [Console]::In.ReadToEnd()
+$dir = Join-Path $env:USERPROFILE '.claude'
+try { [IO.File]::WriteAllText((Join-Path $dir 'agent-lights-statusline.json'), $in) } catch {}
+$prevFile = Join-Path $dir 'agent-lights-statusline.prev'
+if (Test-Path $prevFile) {
+  $prev = (Get-Content $prevFile -Raw).Trim()
+  if ($prev) {
+    $psi = New-Object Diagnostics.ProcessStartInfo 'cmd.exe'
+    $psi.Arguments = '/d /s /c "' + $prev + '"'
+    $psi.RedirectStandardInput = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.UseShellExecute = $false
+    $proc = [Diagnostics.Process]::Start($psi)
+    $proc.StandardInput.Write($in)
+    $proc.StandardInput.Close()
+    [Console]::Out.Write($proc.StandardOutput.ReadToEnd())
+    $proc.WaitForExit()
+  }
+}
+''';
+
+  static const String _statuslineScriptUnix = r'''
+d="$HOME/.claude"
+input=$(cat)
+printf '%s' "$input" > "$d/agent-lights-statusline.json" 2>/dev/null
+[ -s "$d/agent-lights-statusline.prev" ] && printf '%s' "$input" | sh -c "$(cat "$d/agent-lights-statusline.prev")"
+exit 0
+''';
+
+  /// Points `statusLine` at our wrapper and returns the command it replaced (null if there was none or it is ours).
+  static ({Map<String, dynamic> settings, String? previous}) wrapStatusLine(
+    Map<String, dynamic> existing,
+    String wrapperCommand,
+  ) {
+    final result = Map<String, dynamic>.from(existing);
+    final current = result['statusLine'];
+    final currentMap = current is Map ? Map<String, dynamic>.from(current) : <String, dynamic>{};
+    final command = currentMap['command']?.toString() ?? '';
+    if (command.contains(_statuslineMarker)) return (settings: result, previous: null);
+    result['statusLine'] = {...currentMap, 'type': 'command', 'command': wrapperCommand};
+    return (settings: result, previous: command.isEmpty ? null : command);
+  }
+
+  Future<bool> _installClaudeStatusline(String home, bool isWindows) async {
+    try {
+      final dir = p.join(home, '.claude');
+      final settingsPath = p.join(dir, 'settings.json');
+      final raw = await PlatformBridge.readFileString(settingsPath);
+      final decoded = raw == null || raw.trim().isEmpty ? <String, dynamic>{} : jsonDecode(raw);
+      if (decoded is! Map) return false;
+      final script = p.join(dir, '$_statuslineMarker.${isWindows ? 'ps1' : 'sh'}');
+      final wrapperCommand = isWindows
+          ? 'powershell -NoProfile -ExecutionPolicy Bypass -File "$script"'
+          : 'sh "$script"';
+      final wrapped = wrapStatusLine(Map<String, dynamic>.from(decoded), wrapperCommand);
+      if (!await PlatformBridge.writeFileString(
+        script,
+        isWindows ? _statuslineScriptWindows : _statuslineScriptUnix,
+      )) {
+        return false;
+      }
+      if (wrapped.previous != null) {
+        await PlatformBridge.writeFileString(p.join(dir, '$_statuslineMarker.prev'), wrapped.previous!);
+        final formatted = const JsonEncoder.withIndent('  ').convert(wrapped.settings);
+        return await PlatformBridge.writeFileString(settingsPath, '$formatted\n');
+      }
+      if (jsonEncode(wrapped.settings) == jsonEncode(decoded)) return true;
+      final formatted = const JsonEncoder.withIndent('  ').convert(wrapped.settings);
+      return await PlatformBridge.writeFileString(settingsPath, '$formatted\n');
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Automatically installs/updates non-destructive hooks for Claude Code, Google Antigravity, and OpenAI Codex.
   Future<HookInstallResult> ensureHooksInstalled() async {
     if (!PlatformBridge.isDesktop) {
@@ -282,7 +361,10 @@ class HookInstallerService {
       agentId: 'claude',
       isWindows: isWin,
     );
-    if (claudeOk) updated.add(claudeSettingsPath);
+    if (claudeOk) {
+      updated.add(claudeSettingsPath);
+      await _installClaudeStatusline(home, isWin);
+    }
 
     // 2. Google Antigravity (`~/.gemini/config/hooks.json`)
     final antigravityHooksPath =

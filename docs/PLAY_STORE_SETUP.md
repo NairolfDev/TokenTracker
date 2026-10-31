@@ -1,12 +1,12 @@
 # Google Play Store & Android Release Setup (`dev.nairolf.tokentracker`)
 
-> **Stand:** Der Upload-Keystore wurde bereits erzeugt (lokal in `%USERPROFILE%\AgentAmpel-keystore`, **Backup anlegen!**) und die vier Keystore-Secrets sind in GitHub gesetzt. Schritt 1 entfällt. Offen sind nur Schritt 2 (Service Account), Schritt 3 (erstes AAB von Hand) und das Secret `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`. Bis dahin installieren Tester die APK aus dem GitHub Release.
+> **Stand:** Der Upload-Keystore wurde bereits erzeugt (lokal in `%USERPROFILE%\AgentLights-keystore`, **Backup anlegen!**) und die vier Keystore-Secrets sind in GitHub gesetzt. Schritt 1 entfällt. Offen sind nur Schritt 2 (Service Account), Schritt 3 (erstes AAB von Hand) und das Secret `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`. Bis dahin installieren Tester die APK aus dem GitHub Release.
 
 
 Diese Anleitung beschreibt Schritt für Schritt, wie du das automatische Android-Signing sowie den vollautomatischen Upload des Android App Bundles (`.aab`) in den **Google Play Store (Internal Testing Track)** über GitHub Actions (`.github/workflows/release.yml`) einrichtest.
 
 > **Wichtiger Hinweis zur Ausfallsicherheit:**  
-> Unsere GitHub Actions Pipeline ist so konfiguriert, dass sie **auch ohne gesetzte Secrets sofort funktioniert**! Solange `ANDROID_KEYSTORE_BASE64` noch nicht hinterlegt ist, generiert die Pipeline automatisch einen Fallback-Keystore, damit `AgentAmpel-android.apk` und `AgentAmpel-android.aab` bei jedem Push gebaut und an das GitHub Release angehängt werden. Sobald du die 4 Schritte unten abschließt, signiert GitHub Actions mit deinem Produktions-Keystore und lädt jedes Release direkt in die Google Play Console hoch.
+> Unsere GitHub Actions Pipeline ist so konfiguriert, dass sie **auch ohne gesetzte Secrets sofort funktioniert**! Solange `ANDROID_KEYSTORE_BASE64` noch nicht hinterlegt ist, generiert die Pipeline automatisch einen Fallback-Keystore, damit `AgentLights-android.apk` und `AgentLights-android.aab` bei jedem Push gebaut und an das GitHub Release angehängt werden. Sobald du die 4 Schritte unten abschließt, signiert GitHub Actions mit deinem Produktions-Keystore und lädt jedes Release direkt in die Google Play Console hoch.
 
 ---
 
@@ -68,7 +68,7 @@ Speichere diesen Base64-Wert später als GitHub Secret **`ANDROID_KEYSTORE_BASE6
 Damit GitHub Actions per API neue Versionen in deinen Google Play Developer Account hochladen darf, wird ein **Google Cloud Service Account** mit aktivierter **Google Play Android Developer API** benötigt.
 
 ### 2.1 Google Play Android Developer API aktivieren & Service Account erstellen
-1. Öffne die [Google Cloud Console](https://console.cloud.google.com/) und wähle ein bestehendes Projekt aus (oder erstelle ein neues Projekt, z. B. `AgentAmpel-PlayStore-Deploy`).
+1. Öffne die [Google Cloud Console](https://console.cloud.google.com/) und wähle ein bestehendes Projekt aus (oder erstelle ein neues Projekt, z. B. `AgentLights-PlayStore-Deploy`).
 2. Navigiere im linken Menü zu **APIs & Dienste** → **Bibliothek** (*APIs & Services → Library*).
 3. Suche nach **`Google Play Android Developer API`**, klicke darauf und wähle **Aktivieren** (*Enable*).
 4. Navigiere zu **IAM & Verwaltung** → **Dienstkonten** (*IAM & Admin → Service Accounts*).
@@ -90,7 +90,7 @@ Damit GitHub Actions per API neue Versionen in deinen Google Play Developer Acco
 3. Klicke auf **Neue Nutzer einladen** (*Invite new users*).
 4. Füge unter **E-Mail-Adresse** die E-Mail-Adresse deines Service Accounts ein (`github-actions-play-uploader@...iam.gserviceaccount.com`).
 5. Vergib unter **Berechtigungen** (*Permissions*):
-   - **Reiter „App-Berechtigungen" (*App permissions*):** Füge deine App **`Agent-Ampel` (`dev.nairolf.tokentracker`)** hinzu (oder vergib die Berechtigungen direkt auf Kontoebene).
+   - **Reiter „App-Berechtigungen" (*App permissions*):** Füge deine App **`Agent Lights` (`dev.nairolf.tokentracker`)** hinzu (oder vergib die Berechtigungen direkt auf Kontoebene).
    - Aktiviere mindestens folgende Rechte:
      - **App-Informationen ansehen und Sammelberichte herunterladen** (*View app information and download bulk reports*)
      - **Releases auf Test-Tracks verwalten (Interner Test / Geschlossener Test)** (*Release to testing tracks / Manage testing track releases*)
@@ -107,16 +107,16 @@ Damit GitHub Actions per API neue Versionen in deinen Google Play Developer Acco
 
 So führst du den einmaligen Initial-Upload durch:
 1. Stelle sicher, dass du in Schritt 1 & Schritt 4 deinen Produktions-Keystore (`ANDROID_KEYSTORE_BASE64`, `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_PASSWORD`, `ANDROID_KEY_ALIAS`) bereits in den GitHub Secrets hinterlegt hast, damit das erste `.aab` mit deinem endgültigen Upload-Key signiert wird.
-2. Starte den Workflow **Multi-Platform Release & Play Store Deployment** in GitHub Actions (oder pushe auf `main`) und lade aus den **GitHub Actions Artifacts** (`android-release`) oder von der **GitHub Releases**-Seite die Datei **`AgentAmpel-android.aab`** (bzw. `app-release.aab`) herunter.
+2. Starte den Workflow **Multi-Platform Release & Play Store Deployment** in GitHub Actions (oder pushe auf `main`) und lade aus den **GitHub Actions Artifacts** (`android-release`) oder von der **GitHub Releases**-Seite die Datei **`AgentLights-android.aab`** (bzw. `app-release.aab`) herunter.
 3. Öffne die [Google Play Console](https://play.google.com/console/) und klicke auf **App erstellen** (*Create app*):
-   - **App-Name:** `Agent-Ampel & Usage-HUD`
+   - **App-Name:** `Agent Lights`
    - **Standardsprache:** `Deutsch (Deutschland)`
    - **App oder Spiel:** `App`
    - **Kostenlos oder kostenpflichtig:** `Kostenlos`
 4. Navigiere im linken Menü deiner neuen App zu **Testen** → **Interner Test** (*Testing → Internal testing*).
 5. Klicke auf **Neues Release erstellen** (*Create new release*):
    - Bestätige ggf. die Aktivierung von **Play App-Signatur** (*Play App Signing*).
-   - Lade unter **App Bundles** deine heruntergeladene Datei **`AgentAmpel-android.aab`** manuell hoch.
+   - Lade unter **App Bundles** deine heruntergeladene Datei **`AgentLights-android.aab`** manuell hoch.
    - Vergib einen Release-Namen (z. B. `1.0.1`) und klicke auf **Speichern** (*Save*) bzw. **Release überprüfen** (*Review release*).
 6. **Hinweis zum App-Status (`completed` vs. `draft`):**
    - Solange in deiner Google Play Console noch Pflichtangaben im Dashboard (Datenschutzerklärung, Altersfreigabe, Zielgruppe) fehlen, befindet sich die App im Status **Entwurf (`draft`)**.
@@ -144,9 +144,9 @@ Lege dort exakt die folgenden **5 Repository Secrets** an:
 ## Zusammenfassung des automatischen Release-Workflows
 
 Sobald die Secrets eingerichtet sind, führt jeder Push auf `main`/`master` oder jeder Tag-Push (`v*.*.*`) vollautomatisch folgende Schritte aus:
-1. **Windows (`windows-latest`):** Baut und veröffentlicht `AgentAmpel-windows-x64.zip` und `AgentAmpel-windows-x64.exe`.
-2. **Linux (`ubuntu-latest`):** Baut und veröffentlicht `AgentAmpel-linux-x64.tar.gz`.
-3. **macOS (`macos-latest`):** Baut und veröffentlicht `AgentAmpel-macos.zip`.
-4. **Web (`ubuntu-latest`):** Baut und veröffentlicht `AgentAmpel-web.zip`.
-5. **Android (`ubuntu-latest`):** Baut und signiert `AgentAmpel-android.apk` sowie `AgentAmpel-android.aab` und lädt das `.aab` direkt in den **Google Play Store (`internal` Track)** hoch.
+1. **Windows (`windows-latest`):** Baut und veröffentlicht `AgentLights-windows-x64.zip` und `AgentLights-windows-x64.exe`.
+2. **Linux (`ubuntu-latest`):** Baut und veröffentlicht `AgentLights-linux-x64.tar.gz`.
+3. **macOS (`macos-latest`):** Baut und veröffentlicht `AgentLights-macos.zip`.
+4. **Web (`ubuntu-latest`):** Baut und veröffentlicht `AgentLights-web.zip`.
+5. **Android (`ubuntu-latest`):** Baut und signiert `AgentLights-android.apk` sowie `AgentLights-android.aab` und lädt das `.aab` direkt in den **Google Play Store (`internal` Track)** hoch.
 6. **In-App Auto-Updater (`AutoUpdaterService`):** Laufende Clients prüfen beim Start sowie alle 30 Minuten `https://api.github.com/repos/NairolfDev/TokenTracker/releases/latest`, erkennen neue Versionen per Semantic Versioning und installieren das Update auf Knopfdruck.

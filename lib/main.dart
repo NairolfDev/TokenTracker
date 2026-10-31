@@ -9,22 +9,22 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final controller = AmpelController();
   unawaited(controller.initialize());
-  runApp(AgentAmpelApp(controller: controller));
+  runApp(AgentLightsApp(controller: controller));
 }
 
-class AgentAmpelApp extends StatefulWidget {
+class AgentLightsApp extends StatefulWidget {
   final AmpelController? controller;
 
-  const AgentAmpelApp({
+  const AgentLightsApp({
     super.key,
     this.controller,
   });
 
   @override
-  State<AgentAmpelApp> createState() => _AgentAmpelAppState();
+  State<AgentLightsApp> createState() => _AgentLightsAppState();
 }
 
-class _AgentAmpelAppState extends State<AgentAmpelApp> {
+class _AgentLightsAppState extends State<AgentLightsApp> {
   late final AmpelController _controller;
   late final bool _ownsController;
 

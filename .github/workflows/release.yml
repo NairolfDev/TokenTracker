@@ -74,16 +74,16 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Compress-Archive -Path "build/windows/x64/runner/Release/*" -DestinationPath "dist/AgentAmpel-windows-x64.zip" -Force
+          Compress-Archive -Path "build/windows/x64/runner/Release/*" -DestinationPath "dist/AgentLights-windows-x64.zip" -Force
           choco install innosetup -y --no-progress
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=${{ needs.meta.outputs.version }}" installer/agent_ampel.iss
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=${{ needs.meta.outputs.version }}" installer/agent_lights.iss
           Get-ChildItem dist
       - uses: actions/upload-artifact@v4
         with:
           name: windows-release
           path: |
-            dist/AgentAmpel-windows-x64.zip
-            dist/AgentAmpel-windows-setup.exe
+            dist/AgentLights-windows-x64.zip
+            dist/AgentLights-windows-setup.exe
           if-no-files-found: error
 
   # ============================================================================
@@ -109,11 +109,11 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist
-          tar -czf dist/AgentAmpel-linux-x64.tar.gz -C build/linux/x64/release/bundle .
+          tar -czf dist/AgentLights-linux-x64.tar.gz -C build/linux/x64/release/bundle .
       - uses: actions/upload-artifact@v4
         with:
           name: linux-release
-          path: dist/AgentAmpel-linux-x64.tar.gz
+          path: dist/AgentLights-linux-x64.tar.gz
           if-no-files-found: error
 
   # ============================================================================
@@ -135,11 +135,11 @@ jobs:
         run: |
           mkdir -p dist
           cd build/macos/Build/Products/Release
-          zip -r -y "${GITHUB_WORKSPACE}/dist/AgentAmpel-macos.zip" *.app
+          zip -r -y "${GITHUB_WORKSPACE}/dist/AgentLights-macos.zip" *.app
       - uses: actions/upload-artifact@v4
         with:
           name: macos-release
-          path: dist/AgentAmpel-macos.zip
+          path: dist/AgentLights-macos.zip
           if-no-files-found: error
 
   # ============================================================================
@@ -160,11 +160,11 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist
-          (cd build/web && zip -r "${GITHUB_WORKSPACE}/dist/AgentAmpel-web.zip" .)
+          (cd build/web && zip -r "${GITHUB_WORKSPACE}/dist/AgentLights-web.zip" .)
       - uses: actions/upload-artifact@v4
         with:
           name: web-release
-          path: dist/AgentAmpel-web.zip
+          path: dist/AgentLights-web.zip
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
@@ -218,14 +218,14 @@ jobs:
           flutter build apk --release --build-name=${{ needs.meta.outputs.version }} --build-number=${{ github.run_number }}
           flutter build appbundle --release --build-name=${{ needs.meta.outputs.version }} --build-number=${{ github.run_number }}
           mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-release.apk dist/AgentAmpel-android.apk
-          cp build/app/outputs/bundle/release/app-release.aab dist/AgentAmpel-android.aab
+          cp build/app/outputs/flutter-apk/app-release.apk dist/AgentLights-android.apk
+          cp build/app/outputs/bundle/release/app-release.aab dist/AgentLights-android.aab
       - uses: actions/upload-artifact@v4
         with:
           name: android-release
           path: |
-            dist/AgentAmpel-android.apk
-            dist/AgentAmpel-android.aab
+            dist/AgentLights-android.apk
+            dist/AgentLights-android.aab
           if-no-files-found: error
 
       - name: Check Play service account
@@ -266,17 +266,17 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.meta.outputs.tag }}
-          name: "Agent-Ampel ${{ needs.meta.outputs.tag }}"
+          name: "Agent Lights ${{ needs.meta.outputs.tag }}"
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           files: |
-            release-assets/AgentAmpel-windows-x64.zip
-            release-assets/AgentAmpel-windows-setup.exe
-            release-assets/AgentAmpel-linux-x64.tar.gz
-            release-assets/AgentAmpel-macos.zip
-            release-assets/AgentAmpel-web.zip
-            release-assets/AgentAmpel-android.apk
-            release-assets/AgentAmpel-android.aab
+            release-assets/AgentLights-windows-x64.zip
+            release-assets/AgentLights-windows-setup.exe
+            release-assets/AgentLights-linux-x64.tar.gz
+            release-assets/AgentLights-macos.zip
+            release-assets/AgentLights-web.zip
+            release-assets/AgentLights-android.apk
+            release-assets/AgentLights-android.aab
 
   # ============================================================================
   # 8. Firebase Hosting (Spark plan); skipped until the secret and variable exist

@@ -7,23 +7,23 @@ import 'package:http/testing.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:agent_ampel/controllers/ampel_controller.dart';
-import 'package:agent_ampel/models/agent_status.dart';
-import 'package:agent_ampel/models/app_constants.dart';
-import 'package:agent_ampel/models/custom_agent.dart';
-import 'package:agent_ampel/models/provider_stats.dart';
-import 'package:agent_ampel/models/usage_window.dart';
-import 'package:agent_ampel/services/auto_updater_service.dart';
-import 'package:agent_ampel/services/hook_event.dart';
-import 'package:agent_ampel/services/hook_installer_service.dart';
-import 'package:agent_ampel/services/usage/antigravity_usage_service.dart';
-import 'package:agent_ampel/services/usage/claude_usage_service.dart';
-import 'package:agent_ampel/services/usage/usage_cache_service.dart';
-import 'package:agent_ampel/ui/screens/ampel_hud_screen.dart';
-import 'package:agent_ampel/ui/widgets/agent_logo_widget.dart';
-import 'package:agent_ampel/ui/widgets/antigravity_limits_drawer.dart';
-import 'package:agent_ampel/ui/widgets/depleting_usage_ring.dart';
-import 'package:agent_ampel/ui/widgets/traffic_light_widget.dart';
+import 'package:agentlights/controllers/ampel_controller.dart';
+import 'package:agentlights/models/agent_status.dart';
+import 'package:agentlights/models/app_constants.dart';
+import 'package:agentlights/models/custom_agent.dart';
+import 'package:agentlights/models/provider_stats.dart';
+import 'package:agentlights/models/usage_window.dart';
+import 'package:agentlights/services/auto_updater_service.dart';
+import 'package:agentlights/services/hook_event.dart';
+import 'package:agentlights/services/hook_installer_service.dart';
+import 'package:agentlights/services/usage/antigravity_usage_service.dart';
+import 'package:agentlights/services/usage/claude_usage_service.dart';
+import 'package:agentlights/services/usage/usage_cache_service.dart';
+import 'package:agentlights/ui/screens/ampel_hud_screen.dart';
+import 'package:agentlights/ui/widgets/agent_logo_widget.dart';
+import 'package:agentlights/ui/widgets/antigravity_limits_drawer.dart';
+import 'package:agentlights/ui/widgets/depleting_usage_ring.dart';
+import 'package:agentlights/ui/widgets/traffic_light_widget.dart';
 
 Map<String, dynamic> _antigravityFixtureQuotas() {
   return {
@@ -690,9 +690,9 @@ void main() {
             'body': 'Release notes',
             'assets': [
               {
-                'name': 'AgentAmpel-Windows-x64.zip',
+                'name': 'AgentLights-Windows-x64.zip',
                 'browser_download_url':
-                    'https://github.com/NairolfDev/TokenTracker/releases/download/v2.4.0/AgentAmpel-Windows-x64.zip',
+                    'https://github.com/NairolfDev/AgentLights/releases/download/v2.4.0/AgentLights-Windows-x64.zip',
               },
             ],
           }),
@@ -862,5 +862,42 @@ void claudePlanUsageTest() {
     expect(stats, isNotNull);
     expect(stats!.authenticated, isTrue);
     expect(stats.windows.map((w) => w.usedPercent), [17.0, 10.0]);
+  });
+
+  test('Claude status-line payload gives real plan usage, expired windows count as 0%', () async {
+    final tmp = await Directory.systemTemp.createTemp('claude_statusline_');
+    addTearDown(() => tmp.delete(recursive: true));
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    File(p.join(tmp.path, ClaudeUsageService.statuslineFileName)).writeAsStringSync(jsonEncode({
+      'rate_limits': {
+        'five_hour': {'used_percentage': 17.5, 'resets_at': now + 3600},
+        'seven_day': {'used_percentage': 40.0, 'resets_at': now - 60},
+      },
+    }));
+    final stats = await const ClaudeUsageService().readStatuslineLimits(tmp.path);
+    expect(stats, isNotNull);
+    expect(stats!.windows.map((w) => w.usedPercent), [17.5, 0.0]);
+  });
+
+  test('status-line wrapper keeps the previous command and is idempotent', () {
+    final first = HookInstallerService.wrapStatusLine({
+      'statusLine': {'type': 'command', 'command': 'my-line'},
+      'theme': 'dark',
+    }, 'sh "agent-lights-statusline.sh"');
+    expect(first.previous, 'my-line');
+    expect((first.settings['statusLine'] as Map)['command'], contains('agent-lights-statusline'));
+    expect(first.settings['theme'], 'dark');
+    final second = HookInstallerService.wrapStatusLine(first.settings, 'sh "agent-lights-statusline.sh"');
+    expect(second.previous, isNull);
+    expect(HookInstallerService.wrapStatusLine({}, 'x').previous, isNull);
+  });
+
+  testWidgets('usage ring shows the token amount when there is no percentage', (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: DepletingUsageRing(
+        window: UsageWindow(key: 'five_hour', title: '5 Stunden', customQuotaLabel: '1.2M Tokens'),
+      ),
+    ));
+    expect(find.text('1.2M'), findsOneWidget);
   });
 }

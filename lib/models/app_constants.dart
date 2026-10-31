@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 class AppConstants {
   AppConstants._();
 
-  static const String appTitle = 'Agent-Ampel & Usage-HUD';
-  static const String appPackageName = 'agent_ampel';
+  static const String appTitle = 'Agent Lights';
+  static const String appPackageName = 'agentlights';
   static const String githubOwner = 'NairolfDev';
-  static const String githubRepo = 'TokenTracker';
+  static const String githubRepo = 'AgentLights';
   static const int hookServerPort = 47832;
   static const String defaultLocalHost = '127.0.0.1';
 

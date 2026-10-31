@@ -1,4 +1,4 @@
-name: agent_ampel
+name: agentlights
 description: "Agent-Ampel & Usage-HUD (4-Kammer-Echtzeit-Ampel & Multi-Provider Quota-Tracker)"
 publish_to: 'none'
 version: 1.0.0+1

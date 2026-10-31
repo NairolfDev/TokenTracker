@@ -17,7 +17,7 @@ class NotificationService {
               linux: LinuxInitializationSettings(defaultActionName: 'Öffnen'),
               macOS: DarwinInitializationSettings(),
               windows: WindowsInitializationSettings(
-                appName: 'AI Agent Ampel',
+                appName: 'Agent Lights',
                 appUserModelId: 'dev.nairolf.tokentracker',
                 guid: '5b1a3c7e-6f1d-4c53-9a35-0f2d8b6e4a11',
               ),

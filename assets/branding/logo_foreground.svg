@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Agent Lights</title>
+  <defs><filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="30.0"/></filter></defs>
+  <rect x="380.75" y="212.0" width="262.5" height="600.0" rx="131.25" fill="#2E3A50"/>
+  <rect x="388.25" y="219.5" width="247.5" height="585.0" rx="123.75" fill="#1A2231"/>
+  <circle cx="512" cy="315.5" r="42.0" fill="#5F2A31"/>
+  <circle cx="512" cy="446.75" r="42.0" fill="#5F5522"/>
+  <circle cx="512" cy="709.25" r="42.0" fill="#5B616C"/>
+  <circle cx="512" cy="578.0" r="79.8" fill="#34C759" fill-opacity="0.47" filter="url(#glow)"/>
+  <circle cx="512" cy="578.0" r="67.5" fill="none" stroke="#20463A" stroke-width="12.0"/>
+  <path d="M 512.0 510.5 A 67.5 67.5 0 1 1 444.5 578.0" fill="none" stroke="#34C759" stroke-width="12.0" stroke-linecap="round"/>
+  <circle cx="512" cy="578.0" r="42.0" fill="#34C759"/>
+</svg>

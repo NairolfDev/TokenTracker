@@ -81,7 +81,7 @@ class _HudTopBarState extends State<HudTopBar> {
           // Compact HUD Title
           const Flexible(
             child: Text(
-              'AI AGENT AMPEL',
+              'AGENT LIGHTS',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

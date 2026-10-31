@@ -52,6 +52,10 @@ class ClaudeUsageService {
     final live = await _fetchPlanUsage(claudeDir);
     if (live != null) return live;
 
+    // 0b. Limits Claude Code itself hands to its status line (no login needed, see HookInstallerService).
+    final fromStatusline = await readStatuslineLimits(claudeDir);
+    if (fromStatusline != null) return fromStatusline;
+
     // 1. Check if `~/.claude/usage_state.json` has an observed claude.ai usage snapshot
     final usageStateFile = p.join(claudeDir, 'usage_state.json');
     final usageStateContent = await PlatformBridge.readFileString(usageStateFile);
@@ -187,6 +191,40 @@ class ClaudeUsageService {
           'Keine aktiven Claude-Code-Sessions in ~/.claude/projects gefunden. Starte Claude Code oder verbinde dein Abo.',
     );
   }
+
+  /// Reads the last status-line payload saved by our wrapper script (`agent-lights-statusline.json`).
+  /// Its `rate_limits` hold the account's real 5h / weekly usage; a window whose reset time has passed counts as 0%.
+  Future<ProviderStats?> readStatuslineLimits(String claudeDir) async {
+    try {
+      final raw = await PlatformBridge.readFileString(p.join(claudeDir, statuslineFileName));
+      if (raw == null || raw.trim().isEmpty) return null;
+      final limits = (jsonDecode(raw) as Map)['rate_limits'];
+      if (limits is! Map) return null;
+      final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final payload = <String, dynamic>{};
+      for (final key in const ['five_hour', 'seven_day']) {
+        final w = limits[key];
+        if (w is! Map) continue;
+        final used = (w['used_percentage'] as num?)?.toDouble();
+        final resets = (w['resets_at'] as num?)?.toInt();
+        if (used == null) continue;
+        final expired = resets != null && resets <= nowSec;
+        payload[key] = {
+          'utilization': expired ? 0.0 : used,
+          'resets_at': resets == null || expired
+              ? null
+              : DateTime.fromMillisecondsSinceEpoch(resets * 1000, isUtc: true).toIso8601String(),
+        };
+      }
+      final parsed = claudeUsage(payload);
+      if (parsed == null) return null;
+      return quotaStats(parsed.windows, 'Claude Code · Abo', authenticated: true);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static const statuslineFileName = 'agent-lights-statusline.json';
 
   /// Asks Anthropic for the account's real 5h / weekly utilization using Claude Code's own login token.
   /// The token stays on this machine and is only sent to api.anthropic.com. Returns null on any problem

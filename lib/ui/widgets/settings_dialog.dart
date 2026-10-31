@@ -208,7 +208,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                           _SwitchRow(
                             title: 'Mit System starten (Autostart)',
                             subtitle:
-                                'Startet die Agent-Ampel automatisch im Hintergrund',
+                                'Startet Agent Lights automatisch im Hintergrund',
                             value: ctrl.desktopIntegration.autostartEnabled,
                             onChanged: (val) async {
                               await ctrl.desktopIntegration

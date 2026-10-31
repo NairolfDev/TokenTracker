@@ -129,13 +129,13 @@ class DesktopIntegrationService with WindowListener, TrayListener {
             home,
             '.config',
             'autostart',
-            'agent_ampel.desktop',
+            'agentlights.desktop',
           );
           if (enabled) {
             final content = '''[Desktop Entry]
 Type=Application
-Name=Agent-Ampel
-Comment=Agent-Ampel & Usage-HUD
+Name=Agent Lights
+Comment=Agent Lights
 Exec="$exe"
 Terminal=false
 StartupNotify=false
@@ -200,9 +200,8 @@ X-GNOME-Autostart-enabled=true
   Future<void> toggleWindowVisibility() async {
     if (!PlatformBridge.isDesktop) return;
     try {
-      final isVisible = await windowManager.isVisible();
-      final isFocused = await windowManager.isFocused();
-      if (isVisible && isFocused) {
+      // Visible always hides, focused or not: the HUD floats on top and rarely has focus.
+      if (await windowManager.isVisible()) {
         await windowManager.hide();
       } else {
         await showAndFocusWindow();
@@ -242,13 +241,13 @@ X-GNOME-Autostart-enabled=true
           : 'assets/icons/tray_icon.png';
       await trayManager.setIcon(iconPath);
       if (!PlatformBridge.isLinux) {
-        await trayManager.setToolTip('Agent-Ampel & Usage-HUD (Alt+Space)');
+        await trayManager.setToolTip('Agent Lights (Alt+Space)');
       }
       final menu = Menu(
         items: [
           MenuItem(
             key: 'toggle_window',
-            label: 'Ampel ein-/ausblenden (Alt+Space)',
+            label: 'Agent Lights ein-/ausblenden (Alt+Space)',
           ),
           MenuItem.separator(),
           MenuItem(

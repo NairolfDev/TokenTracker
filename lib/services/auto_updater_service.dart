@@ -91,7 +91,7 @@ class AutoUpdaterService extends ChangeNotifier {
     }
   }
 
-  /// Queries `https://api.github.com/repos/NairolfDev/TokenTracker/releases/latest`
+  /// Queries `https://api.github.com/repos/NairolfDev/AgentLights/releases/latest`
   /// and compares `tag_name` with the running app version using Semantic Versioning.
   Future<bool> checkForUpdates({bool silent = false}) async {
     if (_isChecking || _isDownloading) return _updateAvailable;
@@ -111,7 +111,7 @@ class AutoUpdaterService extends ChangeNotifier {
             Uri.parse(latestReleaseApiUrl),
             headers: const {
               'Accept': 'application/vnd.github+json',
-              'User-Agent': 'AgentAmpel-AutoUpdater/1.0',
+              'User-Agent': 'AgentLights-AutoUpdater/1.0',
               'X-GitHub-Api-Version': '2022-11-28',
             },
           )

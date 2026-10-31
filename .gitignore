@@ -1,5 +1,5 @@
 # ==========================================
-# Agent Ampel (TokenTracker) .gitignore
+# Agent Lights .gitignore
 # ==========================================
 
 # --- Flutter / Dart ---
@@ -66,3 +66,6 @@ desktop.ini
 .DS_Store
 
 nul
+
+# --- Firebase CLI cache ---
+.firebase/

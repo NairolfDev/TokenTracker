@@ -56,7 +56,10 @@ class DepletingUsageRing extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                hasData ? '${window.remainingPercent!.round()}%' : '—',
+                hasData
+                    ? '${window.remainingPercent!.round()}%'
+                    // Token estimates have no percentage: show the measured amount instead of a dash.
+                    : (window.customQuotaLabel?.replaceAll(' Tokens', '') ?? '—'),
                 style: TextStyle(
                   fontSize: size * 0.28,
                   fontWeight: FontWeight.w700,

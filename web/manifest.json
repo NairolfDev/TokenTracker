@@ -1,6 +1,6 @@
 {
-    "name": "agent_ampel",
-    "short_name": "agent_ampel",
+    "name": "Agent Lights",
+    "short_name": "Agent Lights",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

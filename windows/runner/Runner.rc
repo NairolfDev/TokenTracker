@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "dev.nairolf.tokentracker" "\0"
-            VALUE "FileDescription", "agent_ampel" "\0"
+            VALUE "FileDescription", "Agent Lights" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "agent_ampel" "\0"
+            VALUE "InternalName", "agentlights" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 dev.nairolf.tokentracker. All rights reserved." "\0"
-            VALUE "OriginalFilename", "agent_ampel.exe" "\0"
-            VALUE "ProductName", "agent_ampel" "\0"
+            VALUE "OriginalFilename", "agentlights.exe" "\0"
+            VALUE "ProductName", "Agent Lights" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

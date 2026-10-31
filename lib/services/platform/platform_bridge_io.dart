@@ -402,7 +402,7 @@ class PlatformBridge {
       await request(0, 'initialize', {
         'clientInfo': {
           'name': 'syp_tokentracker',
-          'title': 'TokenTracker',
+          'title': 'Agent Lights',
           'version': '2.3.0',
         },
       });

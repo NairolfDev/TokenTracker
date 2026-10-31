@@ -18,23 +18,23 @@ class UpdaterInstaller {
   static List<String> get preferredAssetNames {
     if (Platform.isWindows) {
       return const [
-        'AgentAmpel-windows-x64.zip',
-        'AgentAmpel-windows-x64.exe',
+        'AgentLights-windows-x64.zip',
+        'AgentLights-windows-x64.exe',
       ];
     }
     if (Platform.isLinux) {
       return const [
-        'AgentAmpel-linux-x64.tar.gz',
+        'AgentLights-linux-x64.tar.gz',
       ];
     }
     if (Platform.isMacOS) {
       return const [
-        'AgentAmpel-macos.zip',
+        'AgentLights-macos.zip',
       ];
     }
     if (Platform.isAndroid) {
       return const [
-        'AgentAmpel-android.apk',
+        'AgentLights-android.apk',
       ];
     }
     return const [];
@@ -61,7 +61,7 @@ class UpdaterInstaller {
 
     Directory? stagingDir;
     try {
-      stagingDir = await Directory.systemTemp.createTemp('agent_ampel_update_');
+      stagingDir = await Directory.systemTemp.createTemp('agentlights_update_');
       final safeFileName =
           assetName.isNotEmpty ? assetName : p.basename(Uri.parse(downloadUrl).path);
       final downloadedFile = File(p.join(stagingDir.path, safeFileName));
@@ -113,7 +113,7 @@ class UpdaterInstaller {
     final client = http.Client();
     try {
       final request = http.Request('GET', Uri.parse(url));
-      request.headers['User-Agent'] = 'AgentAmpel-AutoUpdater/1.0';
+      request.headers['User-Agent'] = 'AgentLights-AutoUpdater/1.0';
       request.headers['Accept'] = 'application/octet-stream, */*';
       final response = await client.send(request);
 
