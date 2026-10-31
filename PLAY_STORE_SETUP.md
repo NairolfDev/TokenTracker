@@ -1,5 +1,8 @@
 # Google Play Store & Android Release Setup (`dev.nairolf.tokentracker`)
 
+> **Stand:** Der Upload-Keystore wurde bereits erzeugt (lokal in `%USERPROFILE%\AgentAmpel-keystore`, **Backup anlegen!**) und die vier Keystore-Secrets sind in GitHub gesetzt. Schritt 1 entfällt. Offen sind nur Schritt 2 (Service Account), Schritt 3 (erstes AAB von Hand) und das Secret `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`. Bis dahin installieren Tester die APK aus dem GitHub Release.
+
+
 Diese Anleitung beschreibt Schritt für Schritt, wie du das automatische Android-Signing sowie den vollautomatischen Upload des Android App Bundles (`.aab`) in den **Google Play Store (Internal Testing Track)** über GitHub Actions (`.github/workflows/release.yml`) einrichtest.
 
 > **Wichtiger Hinweis zur Ausfallsicherheit:**  
