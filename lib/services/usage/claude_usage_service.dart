@@ -81,6 +81,8 @@ class ClaudeUsageService {
       var tokens5h = 0;
       var tokens7d = 0;
       DateTime? earliest5h;
+      // Claude logs one assistant message as several JSONL lines with the same usage: count each id once.
+      final seenMessageIds = <String>{};
 
       for (final file in jsonlFiles.take(40)) {
         if (file.modified.toUtc().isBefore(sevenDaysAgo)) continue;
@@ -104,6 +106,9 @@ class ClaudeUsageService {
               usage = (row['message'] as Map)['usage'] as Map?;
             }
             usage ??= row['usage'] as Map?;
+
+            final msgId = row['message'] is Map ? (row['message'] as Map)['id']?.toString() : null;
+            if (msgId != null && !seenMessageIds.add(msgId)) continue;
 
             var turnTokens = 0;
             if (usage != null) {

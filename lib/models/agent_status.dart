@@ -215,7 +215,10 @@ class AgentStatusModel {
 
   /// Returns true if any active usage window is exhausted (0% remaining / 100% used).
   bool get hasExhaustedWindow {
-    final activeWindows = windows.where((w) => !w.disabled && w.usedPercent != null);
+    // Windows with a customQuotaLabel are local token estimates against guessed caps: shown, but never red.
+    final activeWindows = windows.where(
+      (w) => !w.disabled && w.usedPercent != null && w.customQuotaLabel == null,
+    );
     if (activeWindows.any((w) => w.isExhausted)) return true;
     if (agentType == AgentType.antigravity) {
       return allAntigravitySubLimits
