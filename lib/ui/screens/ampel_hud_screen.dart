@@ -86,6 +86,8 @@ class _AmpelHudScreenState extends State<AmpelHudScreen> {
               listenable: widget.controller,
               builder: (context, _) {
                 final ctrl = widget.controller;
+                final large = MediaQuery.sizeOf(context).width >=
+                    AppConstants.largeLayoutWidth;
 
                 return Column(
                   children: [
@@ -104,15 +106,16 @@ class _AmpelHudScreenState extends State<AmpelHudScreen> {
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: large ? 20 : 8,
+                          vertical: large ? 14 : 6,
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             // 1. OpenAI Codex
                             AgentRowCard(
+                              large: large,
                               agent: ctrl.codexStatus,
                               onCycleTrafficLight: () => ctrl
                                   .cycleAgentTrafficLight(AgentType.codex),
@@ -121,6 +124,7 @@ class _AmpelHudScreenState extends State<AmpelHudScreen> {
 
                             // 2. Google Antigravity (Expandable/Collapsible Sub-Limits)
                             AgentRowCard(
+                              large: large,
                               agent: ctrl.antigravityStatus,
                               isAntigravityExpanded:
                                   ctrl.isAntigravityExpanded,
@@ -135,6 +139,7 @@ class _AmpelHudScreenState extends State<AmpelHudScreen> {
 
                             // 3. Claude Code
                             AgentRowCard(
+                              large: large,
                               agent: ctrl.claudeStatus,
                               onCycleTrafficLight: () => ctrl
                                   .cycleAgentTrafficLight(AgentType.claude),
@@ -142,6 +147,7 @@ class _AmpelHudScreenState extends State<AmpelHudScreen> {
                             for (final c in ctrl.customStatuses) ...[
                               const SizedBox(height: 5),
                               AgentRowCard(
+                              large: large,
                                 agent: c,
                                 onCycleTrafficLight: () =>
                                     ctrl.cycleAgentTrafficLight(

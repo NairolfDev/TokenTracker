@@ -76,13 +76,16 @@ class AmpelController extends ChangeNotifier {
 
   final Map<String, TrafficLightState> _lastLight = {};
 
+  /// Armed after the first real refresh, so seeded defaults never fire a "limit reached" toast at startup.
+  bool _notifyArmed = false;
+
   /// Notifies when an agent turns red (limit hit) and when it leaves red (limit reset).
   void _notifyOnRedTransition() {
     for (final agent in [...allAgents, ...customStatuses]) {
       final now = agent.trafficLight;
       final before = _lastLight[agent.key];
       _lastLight[agent.key] = now;
-      if (before == null) continue;
+      if (before == null || !_notifyArmed) continue;
       final wasRed = before == TrafficLightState.outOfUsage;
       final isRed = now == TrafficLightState.outOfUsage;
       if (isRed && !wasRed) {
@@ -467,7 +470,8 @@ class AmpelController extends ChangeNotifier {
       hookServerService.broadcast(buildStatusSnapshotJson());
     } finally {
       _isRefreshing = false;
-      notifyListeners();
+      notifyListeners(); // records the baseline silently on the first refresh
+      _notifyArmed = true;
     }
   }
 

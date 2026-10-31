@@ -36,6 +36,10 @@ class AppConstants {
 
   // Compact HUD Dimensions
   static const double hudCollapsedWidth = 500.0;
+  /// Windows at least this wide (large desktop window, tablet, web) use the large layout.
+  static const double largeLayoutWidth = 720.0;
+  static const double hudLargeWidth = 920.0;
+  static const double hudLargeHeight = 680.0;
   static const double hudCollapsedHeight = 250.0;
   static const double hudExpandedHeight = 390.0;
 }

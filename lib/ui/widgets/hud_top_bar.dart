@@ -173,6 +173,25 @@ class _HudTopBarState extends State<HudTopBar> {
                   ),
           ),
 
+          // Compact HUD <-> large window (Desktop)
+          if (isDesktop) ...[
+            const SizedBox(width: 2),
+            _TopBarIconButton(
+              tooltip: 'Große Ansicht / Kompakt umschalten',
+              onTap: () async {
+                await controller.desktopIntegration.toggleLargeWindow();
+                if (mounted) setState(() {});
+              },
+              child: Icon(
+                MediaQuery.sizeOf(context).width >= AppConstants.largeLayoutWidth
+                    ? Icons.close_fullscreen_rounded
+                    : Icons.open_in_full_rounded,
+                size: 13.5,
+                color: AmpelTheme.textSecondary,
+              ),
+            ),
+          ],
+
           // Always-on-Top Pin Button (Desktop)
           if (isDesktop) ...[
             const SizedBox(width: 2),

@@ -13,12 +13,16 @@ class AgentRowCard extends StatefulWidget {
   final VoidCallback? onToggleExpand;
   final VoidCallback? onCycleTrafficLight;
 
+  /// Large layout (wide window / tablet / web): every window, bigger rings, drawer always open.
+  final bool large;
+
   const AgentRowCard({
     super.key,
     required this.agent,
     this.isAntigravityExpanded = false,
     this.onToggleExpand,
     this.onCycleTrafficLight,
+    this.large = false,
   });
 
   @override
@@ -33,7 +37,8 @@ class _AgentRowCardState extends State<AgentRowCard> {
     final agent = widget.agent;
     final isAntigravity = agent.agentType == AgentType.antigravity;
     final trafficState = agent.trafficLight;
-    final primaryWindows = agent.primaryWindows;
+    final primaryWindows =
+        widget.large && !isAntigravity ? agent.windows : agent.primaryWindows;
     final totalSubLimitsCount = agent.allAntigravitySubLimits.isNotEmpty
         ? agent.allAntigravitySubLimits.length
         : agent.windows.length;
@@ -57,7 +62,10 @@ class _AgentRowCardState extends State<AgentRowCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          padding: EdgeInsets.symmetric(
+            horizontal: widget.large ? 16 : 10,
+            vertical: widget.large ? 12 : 7,
+          ),
           decoration: BoxDecoration(
             color: _isHovered ? AppConstants.bgHousing : AppConstants.bgCard,
             borderRadius: BorderRadius.circular(11),
@@ -77,7 +85,7 @@ class _AgentRowCardState extends State<AgentRowCard> {
                           agentType: agent.agentType,
                           customColor: agent.customColor,
                           monogram: agent.monogram,
-                          size: 34,
+                          size: widget.large ? 48 : 34,
                         ),
                         const SizedBox(width: 9),
                         Expanded(
@@ -92,8 +100,8 @@ class _AgentRowCardState extends State<AgentRowCard> {
                                       agent.title,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 12.5,
+                                      style: TextStyle(
+                                        fontSize: widget.large ? 16 : 12.5,
                                         fontWeight: FontWeight.w700,
                                         color: AmpelTheme.textPrimary,
                                         letterSpacing: -0.1,
@@ -101,7 +109,7 @@ class _AgentRowCardState extends State<AgentRowCard> {
                                       ),
                                     ),
                                   ),
-                                  if (isAntigravity) ...[
+                                  if (isAntigravity && !widget.large) ...[
                                     const SizedBox(width: 5),
                                     _ExpandPillButton(
                                       isExpanded: widget.isAntigravityExpanded,
@@ -129,7 +137,7 @@ class _AgentRowCardState extends State<AgentRowCard> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        fontSize: 10.5,
+                                        fontSize: widget.large ? 13 : 10.5,
                                         fontWeight: FontWeight.w500,
                                         color: trafficState ==
                                                 TrafficLightState.outOfUsage
@@ -172,8 +180,8 @@ class _AgentRowCardState extends State<AgentRowCard> {
                           if (i > 0) const SizedBox(width: 7),
                           DepletingUsageRing(
                             window: primaryWindows[i],
-                            size: 33.0,
-                            strokeWidth: 3.1,
+                            size: widget.large ? 56.0 : 33.0,
+                            strokeWidth: widget.large ? 4.6 : 3.1,
                             compact: true,
                           ),
                         ],
@@ -187,7 +195,7 @@ class _AgentRowCardState extends State<AgentRowCard> {
               if (isAntigravity)
                 AntigravityLimitsDrawer(
                   agent: agent,
-                  isExpanded: widget.isAntigravityExpanded,
+                  isExpanded: widget.large || widget.isAntigravityExpanded,
                 ),
             ],
           ),

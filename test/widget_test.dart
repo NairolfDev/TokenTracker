@@ -714,11 +714,34 @@ void main() {
   // 6. FULL HUD WIDGET & ANTIGRAVITY DRAWER EXPANSION TESTS
   // =========================================================================
   group('6. Full HUD Widget & Antigravity Drawer Expansion Tests', () {
+    testWidgets('Wide window switches to the large layout without overflow', (tester) async {
+      tester.view.physicalSize = const Size(920, 680);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final controller = AmpelController(
+        autoUpdaterService: AutoUpdaterService(
+          httpClient: MockClient((_) async => http.Response('{"tag_name":"v1.0.0"}', 200)),
+          autoStart: false,
+        ),
+      );
+      addTearDown(controller.dispose);
+      await controller.setDemoMode(true);
+
+      await tester.pumpWidget(MaterialApp(home: AmpelHudScreen(controller: controller)));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AntigravityLimitsDrawer), findsOneWidget);
+      expect(find.textContaining('▾ Alle'), findsNothing); // drawer is always open, no pill
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets(
       'Renders all 3 rows (Codex, Antigravity, Claude), 4-chamber TrafficLightWidgets, DepletingUsageRings, and expands Antigravity drawer with 0 overflows',
       (WidgetTester tester) async {
-        await tester.binding.setSurfaceSize(const Size(420, 500));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
+        tester.view.physicalSize = const Size(420, 500);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
         final mockHttp = MockClient(
           (_) async => http.Response('{"tag_name":"v1.0.0"}', 200),

@@ -176,6 +176,26 @@ X-GNOME-Autostart-enabled=true
     } catch (_) {}
   }
 
+  /// Switches between the compact Alt+Space HUD and a large, regular app window.
+  Future<void> toggleLargeWindow() async {
+    if (!PlatformBridge.isDesktop) return;
+    try {
+      final size = await windowManager.getSize();
+      if (size.width < AppConstants.largeLayoutWidth) {
+        await setAlwaysOnTop(false);
+        await windowManager.setSize(
+          const Size(AppConstants.hudLargeWidth, AppConstants.hudLargeHeight),
+        );
+        await windowManager.center();
+      } else {
+        await windowManager.setSize(
+          const Size(AppConstants.hudCollapsedWidth, AppConstants.hudCollapsedHeight),
+        );
+        await setAlwaysOnTop(true);
+      }
+    } catch (_) {}
+  }
+
   /// Toggles window visibility for `Alt + Space`, `Escape`, or Tray click.
   Future<void> toggleWindowVisibility() async {
     if (!PlatformBridge.isDesktop) return;
