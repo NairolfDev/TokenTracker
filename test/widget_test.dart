@@ -17,6 +17,7 @@ import 'package:agent_ampel/services/auto_updater_service.dart';
 import 'package:agent_ampel/services/hook_event.dart';
 import 'package:agent_ampel/services/hook_installer_service.dart';
 import 'package:agent_ampel/services/usage/antigravity_usage_service.dart';
+import 'package:agent_ampel/services/usage/claude_usage_service.dart';
 import 'package:agent_ampel/services/usage/usage_cache_service.dart';
 import 'package:agent_ampel/ui/screens/ampel_hud_screen.dart';
 import 'package:agent_ampel/ui/widgets/agent_logo_widget.dart';
@@ -86,6 +87,7 @@ Map<String, dynamic> _codexFixture({Object? primary = 35, Object? secondary = 90
 }
 void main() {
   customAgentAndArgonTests();
+  claudePlanUsageTest();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
@@ -832,5 +834,33 @@ void customAgentAndArgonTests() {
       expect(result.subLimits.last.title, 'Woche');
       expect(result.subLimits.last.remainingPercent, 50.0);
     });
+  });
+}
+
+void claudePlanUsageTest() {
+  test('Claude plan usage comes from the oauth usage endpoint, not token estimates', () async {
+    final tmp = await Directory.systemTemp.createTemp('claude_home_');
+    addTearDown(() => tmp.delete(recursive: true));
+    final claudeDir = Directory(p.join(tmp.path, '.claude'))..createSync();
+    File(p.join(claudeDir.path, '.credentials.json')).writeAsStringSync(jsonEncode({
+      'claudeAiOauth': {
+        'accessToken': 'test-token',
+        'expiresAt': DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch,
+      },
+    }));
+    final client = MockClient((req) async {
+      expect(req.headers['Authorization'], 'Bearer test-token');
+      return http.Response(
+        jsonEncode({
+          'five_hour': {'utilization': 17.0, 'resets_at': '2030-01-01T10:00:00Z'},
+          'seven_day': {'utilization': 10.0, 'resets_at': '2030-01-04T08:00:00Z'},
+        }),
+        200,
+      );
+    });
+    final stats = await ClaudeUsageService(httpClient: client).checkLive(claudeDir.path);
+    expect(stats, isNotNull);
+    expect(stats!.authenticated, isTrue);
+    expect(stats.windows.map((w) => w.usedPercent), [17.0, 10.0]);
   });
 }

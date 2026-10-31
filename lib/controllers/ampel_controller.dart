@@ -496,7 +496,9 @@ class AmpelController extends ChangeNotifier {
           return; // custom agents report via hooks only
       }
 
-      final hasMeasured = stats.windows.any((w) => w.usedPercent != null);
+      // Token-only windows (Claude without a live plan limit) carry a label but no percentage.
+      final hasMeasured = stats.windows
+          .any((w) => w.usedPercent != null || w.customQuotaLabel != null);
       if (hasMeasured && stats.authenticated) {
         await cacheService.put(type.cacheProviderId, stats);
         _updateAgentWithProviderStats(type, stats);

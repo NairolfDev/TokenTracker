@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import '../../models/agent_status.dart';
 import '../../models/provider_stats.dart';
@@ -18,14 +19,9 @@ class ClaudeLiveSignal {
 }
 
 class ClaudeUsageService {
-  /// Default rolling token caps for Claude Code Pro/Max local log calculation when web usage is not cached.
-  final int fiveHourTokenCap;
-  final int weeklyTokenCap;
+  final http.Client? httpClient;
 
-  const ClaudeUsageService({
-    this.fiveHourTokenCap = 450000,
-    this.weeklyTokenCap = 3200000,
-  });
+  const ClaudeUsageService({this.httpClient});
 
   /// Checks Claude Code usage by combining:
   /// 1. Structured usage payload if present in `~/.claude/usage_state.json`
@@ -51,6 +47,10 @@ class ClaudeUsageService {
     if (!hasClaudeDir && cachedStats != null) {
       return cachedStats;
     }
+
+    // 0. Real plan usage (same numbers as Claude's "Plan usage limits") via the signed-in Claude Code account.
+    final live = await _fetchPlanUsage(claudeDir);
+    if (live != null) return live;
 
     // 1. Check if `~/.claude/usage_state.json` has an observed claude.ai usage snapshot
     final usageStateFile = p.join(claudeDir, 'usage_state.json');
@@ -143,9 +143,6 @@ class ClaudeUsageService {
       }
 
       if (tokens7d > 0 || tokens5h > 0) {
-        final pct5h = ((tokens5h / fiveHourTokenCap) * 100.0).clamp(0.0, 100.0);
-        final pct7d = ((tokens7d / weeklyTokenCap) * 100.0).clamp(0.0, 100.0);
-
         final reset5h = (earliest5h ?? now)
             .add(const Duration(hours: 5))
             .toUtc()
@@ -162,21 +159,19 @@ class ClaudeUsageService {
           UsageWindow(
             key: 'five_hour',
             title: '5 Stunden',
-            usedPercent: (pct5h * 10.0).round() / 10.0,
             resetsAt: reset5h,
-            customQuotaLabel: '${_formatTokens(tokens5h)} / ${_formatTokens(fiveHourTokenCap)}',
+            customQuotaLabel: '${_formatTokens(tokens5h)} Tokens',
           ),
           UsageWindow(
             key: 'seven_day',
             title: 'Woche',
-            usedPercent: (pct7d * 10.0).round() / 10.0,
             resetsAt: reset7d,
-            customQuotaLabel: '${_formatTokens(tokens7d)} / ${_formatTokens(weeklyTokenCap)}',
+            customQuotaLabel: '${_formatTokens(tokens7d)} Tokens',
           ),
         ];
         return quotaStats(
           windows,
-          'Claude Code · Lokale JSONL-Telemetrie',
+          'Claude Code · Lokale JSONL-Telemetrie (Verbrauch, kein Abo-Limit)',
           authenticated: true,
         );
       }
@@ -191,6 +186,42 @@ class ClaudeUsageService {
       detail:
           'Keine aktiven Claude-Code-Sessions in ~/.claude/projects gefunden. Starte Claude Code oder verbinde dein Abo.',
     );
+  }
+
+  /// Asks Anthropic for the account's real 5h / weekly utilization using Claude Code's own login token.
+  /// The token stays on this machine and is only sent to api.anthropic.com. Returns null on any problem
+  /// (no login, expired token, offline, macOS keychain login), so callers fall back to the local estimate.
+  Future<ProviderStats?> checkLive(String claudeDir) => _fetchPlanUsage(claudeDir);
+
+  Future<ProviderStats?> _fetchPlanUsage(String claudeDir) async {
+    final client = httpClient ?? http.Client();
+    try {
+      final raw = await PlatformBridge.readFileString(p.join(claudeDir, '.credentials.json'));
+      if (raw == null || raw.isEmpty) return null;
+      final oauth = (jsonDecode(raw) as Map)['claudeAiOauth'];
+      if (oauth is! Map) return null;
+      final token = oauth['accessToken']?.toString() ?? '';
+      final expiresAt = (oauth['expiresAt'] as num?)?.toInt();
+      if (token.isEmpty ||
+          (expiresAt != null && expiresAt <= DateTime.now().millisecondsSinceEpoch)) {
+        return null;
+      }
+      final res = await client.get(
+        Uri.parse('https://api.anthropic.com/api/oauth/usage'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'anthropic-beta': 'oauth-2025-04-20',
+        },
+      ).timeout(const Duration(seconds: 8));
+      if (res.statusCode != 200) return null;
+      final parsed = claudeUsage(jsonDecode(res.body) as Map<String, dynamic>);
+      if (parsed == null) return null;
+      return quotaStats(parsed.windows, 'Claude Code · Abo (live)', authenticated: true);
+    } catch (_) {
+      return null;
+    } finally {
+      if (httpClient == null) client.close();
+    }
   }
 
   /// Inspects the most recently modified `~/.claude/projects/**/*.jsonl` file to detect live tool execution,
