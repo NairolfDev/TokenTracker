@@ -1,38 +1,25 @@
 # ==========================================
-# SYP-TokenTracker .gitignore
+# Agent Ampel (TokenTracker) .gitignore
 # ==========================================
 
-# --- Virtual Environments ---
-venv/
-.venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-
-# --- Python bytecode and cache ---
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+# --- Flutter / Dart ---
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
 build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+coverage/
+*.iml
+
+# --- Reference & Runtime Cache ---
+.tmp_tokentracker_ref/
+.tracker/
+chrome_profile/
+test-output/
+config.json
+*.bak
 
 # --- Secrets, Credentials & Local Auth ---
 credentials.json
@@ -46,66 +33,34 @@ tokens.json
 *.pfx
 *.p12
 *.pkcs12
+*.jks
+*.keystore
+android/key.properties
+key.properties
 .env
 .env.*
 *.env
 
-# --- App-specific runtime & storage directories ---
-.tracker/
-chrome_profile/
-test-output/
-config.json
+# --- Python / Legacy ---
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
 
 # --- Logs & temporary files ---
 *.log
 *.tmp
 *.temp
-ui-error.log
-startup-error.log
-
-# --- Testing & Coverage ---
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-.nox/
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-playwright-report/
-test-results/
 
 # --- IDEs & Code Editors ---
 .vscode/
 .idea/
-*.sublime-project
-*.sublime-workspace
 *.swp
 *.swo
 *~
 
 # --- Operating System Files ---
-# Windows
 Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
 desktop.ini
-$RECYCLE.BIN/
-*.cab
-*.msi
-*.msm
-*.msp
-*.lnk
-
-# macOS
 .DS_Store
-.AppleDouble
-.LSOverride
-._*
-
-# Linux
-*~
-.directory

@@ -1,0 +1,336 @@
+name: Multi-Platform Release & Play Store Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_CHANNEL: 'stable'
+  APP_PACKAGE_NAME: 'dev.nairolf.tokentracker'
+
+jobs:
+  # ============================================================================
+  # 1. Windows Release Build (x64 ZIP + Standalone EXE)
+  # ============================================================================
+  build-windows:
+    name: Build Windows (x64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter (${{ env.FLUTTER_CHANNEL }})
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Verify Code Analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run Unit & Widget Tests
+        run: flutter test
+
+      - name: Build Windows Release
+        run: flutter build windows --release --build-number=${{ github.run_number }}
+
+      - name: Package Windows Release Assets
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path "build/windows/x64/runner/Release/*" -DestinationPath "dist/AgentAmpel-windows-x64.zip" -Force
+          Copy-Item -Path "build/windows/x64/runner/Release/agent_ampel.exe" -Destination "dist/AgentAmpel-windows-x64.exe" -Force
+          Get-ChildItem dist
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: |
+            dist/AgentAmpel-windows-x64.zip
+            dist/AgentAmpel-windows-x64.exe
+          if-no-files-found: error
+
+  # ============================================================================
+  # 2. Linux Release Build (x64 tar.gz Bundle)
+  # ============================================================================
+  build-linux:
+    name: Build Linux (x64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install GTK3 & System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libgtk-3-dev \
+            liblzma-dev \
+            libstdc++-12-dev \
+            libayatana-appindicator3-dev
+
+      - name: Setup Flutter (${{ env.FLUTTER_CHANNEL }})
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Linux Release
+        run: flutter build linux --release --build-number=${{ github.run_number }}
+
+      - name: Package Linux Release Bundle
+        run: |
+          mkdir -p dist
+          tar -czf dist/AgentAmpel-linux-x64.tar.gz -C build/linux/x64/release/bundle .
+          ls -lh dist/
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: dist/AgentAmpel-linux-x64.tar.gz
+          if-no-files-found: error
+
+  # ============================================================================
+  # 3. macOS Release Build (.app Bundle ZIP)
+  # ============================================================================
+  build-macos:
+    name: Build macOS (Universal/arm64)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter (${{ env.FLUTTER_CHANNEL }})
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build macOS Release
+        run: flutter build macos --release --build-number=${{ github.run_number }}
+
+      - name: Package macOS Release Archive
+        run: |
+          mkdir -p dist
+          cd build/macos/Build/Products/Release
+          zip -r -y "${GITHUB_WORKSPACE}/dist/AgentAmpel-macos.zip" *.app
+          ls -lh "${GITHUB_WORKSPACE}/dist/"
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: dist/AgentAmpel-macos.zip
+          if-no-files-found: error
+
+  # ============================================================================
+  # 4. Web Release Build (Static SPA Bundle ZIP)
+  # ============================================================================
+  build-web:
+    name: Build Web (SPA)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter (${{ env.FLUTTER_CHANNEL }})
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Web Release
+        run: flutter build web --release --build-number=${{ github.run_number }}
+
+      - name: Package Web Release Archive
+        run: |
+          mkdir -p dist
+          cd build/web
+          zip -r "${GITHUB_WORKSPACE}/dist/AgentAmpel-web.zip" .
+          ls -lh "${GITHUB_WORKSPACE}/dist/"
+
+      - name: Upload Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-release
+          path: dist/AgentAmpel-web.zip
+          if-no-files-found: error
+
+  # ============================================================================
+  # 5. Android APK + AAB Release Build & Google Play Internal Track Upload
+  # ============================================================================
+  build-android-and-deploy-playstore:
+    name: Build Android (APK + AAB) & Play Store Upload
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter (${{ env.FLUTTER_CHANNEL }})
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+
+      - name: Configure Android Release Keystore (or Fallback Auto-Generated Keystore)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
+            echo "Decoding production upload keystore from ANDROID_KEYSTORE_BASE64 secret..."
+            echo "${ANDROID_KEYSTORE_BASE64}" | tr -d '\r\n ' | base64 --decode > android/app/upload-keystore.jks
+            {
+              echo "storePassword=${ANDROID_STORE_PASSWORD}"
+              echo "keyPassword=${ANDROID_KEY_PASSWORD}"
+              echo "keyAlias=${ANDROID_KEY_ALIAS:-upload}"
+              echo "storeFile=upload-keystore.jks"
+            } > android/key.properties
+          else
+            echo "ANDROID_KEYSTORE_BASE64 secret not set -> Generating fallback keystore so APK/AAB builds succeed out-of-the-box..."
+            keytool -genkeypair -v \
+              -keystore android/app/upload-keystore.jks \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -alias upload \
+              -dname "CN=AgentAmpel, OU=DevOps, O=NairolfDev, L=Berlin, S=BE, C=DE" \
+              -storepass android \
+              -keypass android
+            {
+              echo "storePassword=android"
+              echo "keyPassword=android"
+              echo "keyAlias=upload"
+              echo "storeFile=upload-keystore.jks"
+            } > android/key.properties
+          fi
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Android Release APK & AppBundle (AAB)
+        run: |
+          flutter build apk --release --build-number=${{ github.run_number }}
+          flutter build appbundle --release --build-number=${{ github.run_number }}
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk dist/AgentAmpel-android.apk
+          cp build/app/outputs/bundle/release/app-release.aab dist/AgentAmpel-android.aab
+          ls -lh dist/
+
+      - name: Upload Android Artifacts (APK + AAB)
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: |
+            dist/AgentAmpel-android.apk
+            dist/AgentAmpel-android.aab
+          if-no-files-found: error
+
+      - name: Check Google Play Service Account Secret
+        env:
+          PLAY_SECRET: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "${PLAY_SECRET}" ]; then
+            echo "HAS_PLAY_SECRET=true" >> "$GITHUB_ENV"
+            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON detected -> Will upload AAB to Google Play Store (internal track)."
+          else
+            echo "HAS_PLAY_SECRET=false" >> "$GITHUB_ENV"
+            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON not configured -> Skipping Play Store upload (see PLAY_STORE_SETUP.md)."
+          fi
+
+      - name: Upload AAB to Google Play Store (Internal Testing Track)
+        if: ${{ env.HAS_PLAY_SECRET == 'true' }}
+        continue-on-error: true
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.APP_PACKAGE_NAME }}
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+          # Note: If your app in Google Play Console is still in "Draft" state before completing
+          # all store listing questionnaires, change `status: completed` to `status: draft`.
+
+  # ============================================================================
+  # 6. Publish GitHub Release with All Platform Assets
+  # ============================================================================
+  publish-release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - build-windows
+      - build-linux
+      - build-macos
+      - build-web
+      - build-android-and-deploy-playstore
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download All Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Determine Release Tag
+        id: meta
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            TAG_NAME="${GITHUB_REF_NAME}"
+          else
+            TAG_NAME="v1.0.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+          echo "Publishing GitHub Release for tag: ${TAG_NAME}"
+          ls -lh release-assets/
+
+      - name: Create / Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag_name }}
+          name: "Agent-Ampel ${{ steps.meta.outputs.tag_name }}"
+          generate_release_notes: true
+          prerelease: false
+          files: |
+            release-assets/AgentAmpel-windows-x64.zip
+            release-assets/AgentAmpel-windows-x64.exe
+            release-assets/AgentAmpel-linux-x64.tar.gz
+            release-assets/AgentAmpel-macos.zip
+            release-assets/AgentAmpel-web.zip
+            release-assets/AgentAmpel-android.apk
+            release-assets/AgentAmpel-android.aab
