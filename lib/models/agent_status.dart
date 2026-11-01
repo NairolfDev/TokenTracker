@@ -249,6 +249,9 @@ class AgentStatusModel {
       return TrafficLightState.outOfUsage.defaultSubtitle;
     }
     final base = subtitle.isNotEmpty ? subtitle : trafficLight.defaultSubtitle;
+    if (stale && trafficLight == TrafficLightState.idle && agentType != AgentType.custom) {
+      return 'Bereit · Zahlen veraltet (Dienst nicht erreichbar)';
+    }
     if (tokenOnly && trafficLight == TrafficLightState.idle) {
       final tokens = windows
           .map((w) => '${w.customQuotaLabel?.replaceAll(' Tokens', '')} ${w.shortLabel}')

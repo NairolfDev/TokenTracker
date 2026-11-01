@@ -135,7 +135,7 @@ class AmpelController extends ChangeNotifier {
   bool get pairedByCode => _joinSecret.isNotEmpty;
 
   /// Link inside the QR code: opens the web app, which pairs itself from the fragment.
-  String get pairUrl => 'https://agent-lights.web.app/#pair=$_pairSecret';
+  String get pairUrl => 'agentlights://pair/$_pairSecret';
   bool get demoMode => _demoMode;
   String get statusBannerMessage => _statusBannerMessage;
   bool get isHookServerRunning => hookServerService.isRunning;
@@ -264,14 +264,6 @@ class AmpelController extends ChangeNotifier {
       _remoteAccess = prefs.getBool('remote_access') ?? false;
       _pairSecret = prefs.getString('pair_secret') ?? '';
       _joinSecret = prefs.getString('join_secret') ?? '';
-      // The QR link opens the web app as `.../#pair=SECRET`.
-      final linked = PlatformBridge.isWeb ? RelaySyncService.parseSecret(Uri.base.fragment) : null;
-      if (linked != null) {
-        _joinSecret = linked;
-        _demoMode = false;
-        await prefs.setString('join_secret', linked);
-        await prefs.setBool('demo_mode', false);
-      }
       await _loadCustomAgents(prefs);
     } catch (_) {}
 
@@ -547,7 +539,8 @@ class AmpelController extends ChangeNotifier {
         _agents[type] = current.copyWith(
           detail: stats.detail,
           source: stats.source,
-          lastUpdated: DateTime.now(),
+          // Rings that stay on screen without a fresh measurement are old numbers: say so.
+          stale: current.windows.any((w) => w.usedPercent != null),
         );
       }
       notifyListeners();

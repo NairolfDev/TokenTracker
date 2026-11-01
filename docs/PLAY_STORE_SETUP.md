@@ -147,6 +147,5 @@ Sobald die Secrets eingerichtet sind, führt jeder Push auf `main`/`master` oder
 1. **Windows (`windows-latest`):** Baut und veröffentlicht `AgentLights-windows-x64.zip` und `AgentLights-windows-x64.exe`.
 2. **Linux (`ubuntu-latest`):** Baut und veröffentlicht `AgentLights-linux-x64.tar.gz`.
 3. **macOS (`macos-latest`):** Baut und veröffentlicht `AgentLights-macos.zip`.
-4. **Web (`ubuntu-latest`):** Baut und veröffentlicht `AgentLights-web.zip`.
 5. **Android (`ubuntu-latest`):** Baut und signiert `AgentLights-android.apk` sowie `AgentLights-android.aab` und lädt das `.aab` direkt in den **Google Play Store (`internal` Track)** hoch.
 6. **In-App Auto-Updater (`AutoUpdaterService`):** Laufende Clients prüfen beim Start sowie alle 30 Minuten `https://api.github.com/repos/NairolfDev/TokenTracker/releases/latest`, erkennen neue Versionen per Semantic Versioning und installieren das Update auf Knopfdruck.

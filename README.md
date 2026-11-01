@@ -10,8 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><b>Download</b></a> ·
-  <a href="https://agent-lights.web.app">Web demo</a>
+  <a href="../../releases/latest"><b>Download</b></a>
 </p>
 
 ## What it does
@@ -32,7 +31,6 @@ Open the [latest release](../../releases/latest) and pick your platform:
 | macOS | `AgentLights-macos.zip` | Unzip, right-click the app, **Open** (unsigned build, first launch only). |
 | Linux | `AgentLights-linux-x64.tar.gz` | Extract and run `agentlights`. |
 | Android | Google Play internal test, or `AgentLights-android.apk` | Allow installs from your browser once. |
-| Web | [agent-lights.web.app](https://agent-lights.web.app) | Demo mode only (see below). |
 
 **Updates:** the desktop app checks GitHub Releases and tells you when a new version is out.
 
@@ -48,11 +46,12 @@ There are no accounts. The desktop app reads what your agents already keep on yo
 
 Tokens and logins never leave your computer. Nothing is sent anywhere unless you switch on the QR pairing below.
 
-**Phone and web (works from anywhere):** on the desktop open *Verbindungen* and switch on *Fernzugriff per QR-Code*.
-Scan the QR code with your phone camera: it opens Agent Lights in the browser, already paired. In the Android app,
-paste the link or code under *Verbindungen* instead. Only agent states and percentages are sent, through a public
-[ntfy.sh](https://ntfy.sh) topic named after a random secret that only the QR code contains. *Neuen Code erzeugen* locks out every phone that used the old one.
-Without pairing (or in the same Wi-Fi) you can still enter the desktop's address manually.
+**Phone (works from anywhere):** on the desktop open *Verbindungen* and switch on *Fernzugriff per QR-Code*.
+In the Android app open *Verbindungen* and tap *QR-Code scannen* (the camera permission is asked once). Only agent states and percentages
+are sent, through a public [ntfy.sh](https://ntfy.sh) topic named after a random secret that only the QR code contains.
+*Neuen Code erzeugen* locks out every phone that used the old one. On the same Wi-Fi you can also enter the desktop's address manually.
+
+**Uninstall:** Windows *Settings → Apps → Agent Lights* (the uninstaller also removes the Claude/Codex hooks it added).
 
 ## Report status from your own agent
 
@@ -68,11 +67,11 @@ Events: `working`, `permission`, `stop`, `error`. Add the agent under *Settings 
 
 ```bash
 flutter pub get && flutter analyze && flutter test
-flutter build windows --release   # or linux / macos / web / apk
+flutter build windows --release   # or linux / macos / apk
 ```
 
 Releases are built by GitHub Actions ([release.yml](.github/workflows/release.yml)) whenever a `v*` tag is pushed:
-all platforms, a GitHub Release, the Android internal test track and (optionally) Firebase Hosting.
+all platforms, a GitHub Release, the Android internal test track.
 Signing keys and deploy credentials exist only as GitHub Actions secrets, see [docs/PLAY_STORE_SETUP.md](docs/PLAY_STORE_SETUP.md).
 
 ## License

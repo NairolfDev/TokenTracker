@@ -20,6 +20,7 @@ UninstallDisplayIcon={app}\agentlights.exe
 
 [Files]
 Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "uninstall_cleanup.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Agent Lights"; Filename: "{app}\agentlights.exe"
@@ -27,3 +28,6 @@ Name: "{autodesktop}\Agent Lights"; Filename: "{app}\agentlights.exe"
 
 [Run]
 Filename: "{app}\agentlights.exe"; Description: "Agent Lights starten"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\uninstall_cleanup.ps1"""; Flags: runhidden; RunOnceId: "CleanAgentHooks"

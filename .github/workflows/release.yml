@@ -143,36 +143,6 @@ jobs:
           if-no-files-found: error
 
   # ============================================================================
-  # 5. Web (release zip + site artifact for Firebase Hosting)
-  # ============================================================================
-  build-web:
-    name: Build Web
-    needs: [meta, verify]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: ${{ env.FLUTTER_CHANNEL }}
-          cache: true
-      - run: flutter pub get
-      - run: flutter build web --release --build-name=${{ needs.meta.outputs.version }} --build-number=${{ github.run_number }}
-      - name: Package
-        run: |
-          mkdir -p dist
-          (cd build/web && zip -r "${GITHUB_WORKSPACE}/dist/AgentLights-web.zip" .)
-      - uses: actions/upload-artifact@v4
-        with:
-          name: web-release
-          path: dist/AgentLights-web.zip
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        with:
-          name: web-site
-          path: build/web
-          if-no-files-found: error
-
-  # ============================================================================
   # 6. Android APK (GitHub Release) + AAB (Play internal testing)
   # ============================================================================
   build-android:
@@ -256,7 +226,7 @@ jobs:
   publish-release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
-    needs: [meta, build-windows, build-linux, build-macos, build-web, build-android]
+    needs: [meta, build-windows, build-linux, build-macos, build-android]
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -274,26 +244,5 @@ jobs:
             release-assets/AgentLights-windows-setup.exe
             release-assets/AgentLights-linux-x64.tar.gz
             release-assets/AgentLights-macos.zip
-            release-assets/AgentLights-web.zip
             release-assets/AgentLights-android.apk
             release-assets/AgentLights-android.aab
-
-  # ============================================================================
-  # 8. Firebase Hosting (Spark plan); skipped until the secret and variable exist
-  # ============================================================================
-  deploy-web:
-    name: Deploy web app (Firebase Hosting)
-    runs-on: ubuntu-latest
-    needs: [build-web]
-    if: ${{ vars.FIREBASE_PROJECT_ID != '' }}
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: web-site
-          path: build/web
-      - uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: ${{ vars.FIREBASE_PROJECT_ID }}
-          channelId: live
-          entryPoint: .
