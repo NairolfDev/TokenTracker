@@ -68,7 +68,7 @@ class DepletingUsageRing extends StatelessWidget {
                   fontSize: size * 0.28,
                   fontWeight: FontWeight.w700,
                   color: !hasData
-                      ? AmpelTheme.textMuted
+                      ? AmpelTheme.textSecondary
                       : (isCritical
                           ? AppConstants.ringCritical
                           : AmpelTheme.textPrimary),
@@ -164,7 +164,18 @@ class DepletingUsageRingPainter extends CustomPainter {
 
     canvas.drawCircle(center, radius, trackPaint);
 
-    if (!hasData) return;
+    if (!hasData) {
+      // No limit known (token count only): a calm, complete outline instead of a broken-looking arc.
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..color = AppConstants.ringNeutralSecondary.withValues(alpha: 0.45)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth * 0.6,
+      );
+      return;
+    }
 
     final clampedRemaining = remainingFraction.clamp(0.0, 1.0);
     if (clampedRemaining <= 0.0) {

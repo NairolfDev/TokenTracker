@@ -152,6 +152,25 @@ class HookInstallerService {
         detail: 'Wartet auf Freigabe',
       );
       upsertHookRule(
+        eventKey: 'PermissionRequest',
+        matcher: '*',
+        hookEvent: 'permission',
+        detail: 'Wartet auf Freigabe',
+      );
+      // After you approve, the next signal must turn the light back to green.
+      upsertHookRule(
+        eventKey: 'PostToolUse',
+        matcher: '*',
+        hookEvent: 'working',
+        detail: 'Arbeitet...',
+      );
+      upsertHookRule(
+        eventKey: 'UserPromptSubmit',
+        matcher: null,
+        hookEvent: 'working',
+        detail: 'Arbeitet...',
+      );
+      upsertHookRule(
         eventKey: 'Stop',
         matcher: null,
         hookEvent: 'stop',

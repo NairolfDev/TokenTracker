@@ -248,7 +248,14 @@ class AgentStatusModel {
       }
       return TrafficLightState.outOfUsage.defaultSubtitle;
     }
-    return subtitle.isNotEmpty ? subtitle : trafficLight.defaultSubtitle;
+    final base = subtitle.isNotEmpty ? subtitle : trafficLight.defaultSubtitle;
+    if (agentType == AgentType.claude &&
+        trafficLight == TrafficLightState.idle &&
+        windows.isNotEmpty &&
+        windows.every((w) => w.usedPercent == null)) {
+      return 'Bereit · Limit unbekannt (nur Token-Zähler)';
+    }
+    return base;
   }
 
   /// Primary Usage Windows shown in Zone 3 of the compact card:

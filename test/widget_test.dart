@@ -919,6 +919,21 @@ void claudePlanUsageTest() {
     final hook = (merged['hooks']['Stop'] as List).first['hooks'].first as Map;
     expect(hook['async'], true);
     expect(hook['timeout'], 3);
+    // Yellow needs a permission hook and a way back to green once you approved.
+    for (final k in ['PermissionRequest', 'Notification', 'PostToolUse', 'UserPromptSubmit']) {
+      expect(merged['hooks'], contains(k));
+    }
+  });
+
+  test('Claude without a known limit says so instead of showing broken rings', () {
+    final a = AgentStatusModel(
+      agentType: AgentType.claude,
+      title: 'Claude Code',
+      subtitle: 'Bereit (Idle)',
+      lastUpdated: DateTime(2026),
+      windows: [UsageWindow(key: 'five_hour', title: '5 Stunden', customQuotaLabel: '12.1M Tokens')],
+    );
+    expect(a.effectiveSubtitle, contains('Limit unbekannt'));
   });
 
   testWidgets('Phone layout shows a tab bar, cards without overflow and the Verbindungen tab', (tester) async {

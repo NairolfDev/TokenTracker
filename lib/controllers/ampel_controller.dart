@@ -384,7 +384,10 @@ class AmpelController extends ChangeNotifier {
         : const Duration(hours: 1);
     if (claudeHookAge > const Duration(seconds: 6)) {
       final signal = await claudeService.checkLiveJsonlSignal();
-      if (signal != null) {
+      // A file that was just written must not hide a pending permission prompt (yellow).
+      final keepYellow = claudeCurrent.rawHookState == TrafficLightState.needsInput &&
+          signal?.state == TrafficLightState.working;
+      if (signal != null && !keepYellow) {
         if (claudeCurrent.rawHookState != signal.state ||
             claudeCurrent.subtitle != signal.detail) {
           _agents[AgentType.claude] = claudeCurrent.copyWith(

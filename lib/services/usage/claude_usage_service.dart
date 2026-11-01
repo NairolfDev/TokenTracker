@@ -241,7 +241,7 @@ class ClaudeUsageService {
       final token = oauth['accessToken']?.toString() ?? '';
       final expiresAt = (oauth['expiresAt'] as num?)?.toInt();
       if (token.isEmpty ||
-          (expiresAt != null && expiresAt <= DateTime.now().millisecondsSinceEpoch)) {
+          (expiresAt != null && expiresAt > 0 && expiresAt <= DateTime.now().millisecondsSinceEpoch)) {
         return null;
       }
       final res = await client.get(
