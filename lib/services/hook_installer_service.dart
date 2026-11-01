@@ -49,7 +49,7 @@ class HookInstallerService {
     if (isWindows) {
       final escapedJson =
           '{\\"agent\\":\\"$agent\\",\\"event\\":\\"$event\\",\\"detail\\":\\"$detail\\"}';
-      return 'curl.exe -s -m 1 -X POST $_hookEndpoint -H "Content-Type: application/json" -d "$escapedJson" >nul 2>&1 || exit /b 0';
+      return 'curl.exe -s -m 1 -X POST $_hookEndpoint -H "Content-Type: application/json" -d "$escapedJson" -o nul || exit 0';
     } else {
       final rawJson = '{"agent":"$agent","event":"$event","detail":"$detail"}';
       return 'curl -s -m 1 -X POST $_hookEndpoint -H "Content-Type: application/json" -d \'$rawJson\' >/dev/null 2>&1 || true';

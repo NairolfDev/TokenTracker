@@ -900,4 +900,16 @@ void claudePlanUsageTest() {
     ));
     expect(find.text('1.2M'), findsOneWidget);
   });
+
+  test('Windows hook command works in cmd and Git Bash (no >nul, no exit /b)', () {
+    final cmd = HookInstallerService.buildCurlCommand(
+      agent: 'claude',
+      event: 'stop',
+      detail: 'Idle',
+      isWindows: true,
+    );
+    expect(cmd, endsWith('-o nul || exit 0'));
+    expect(cmd, isNot(contains('exit /b')));
+    expect(cmd, isNot(contains('>nul')));
+  });
 }
