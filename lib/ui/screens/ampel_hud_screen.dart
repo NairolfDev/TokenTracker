@@ -7,6 +7,7 @@ import '../../services/platform/platform_bridge.dart';
 import '../widgets/agent_row_card.dart';
 import '../widgets/hud_top_bar.dart';
 import '../widgets/settings_dialog.dart';
+import 'phone_home_screen.dart';
 
 class AmpelHudScreen extends StatefulWidget {
   final AmpelController controller;
@@ -47,6 +48,9 @@ class _AmpelHudScreenState extends State<AmpelHudScreen> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = PlatformBridge.isDesktop;
+    if (!isDesktop && MediaQuery.sizeOf(context).width < AppConstants.phoneLayoutWidth) {
+      return PhoneHomeScreen(controller: widget.controller);
+    }
 
     return Focus(
       focusNode: _keyboardFocusNode,

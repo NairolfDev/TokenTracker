@@ -239,7 +239,7 @@ class _ExpandPillButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                isExpanded ? '▴ Alle ($count)' : '▾ Alle ($count)',
+                'Alle ($count)',
                 style: const TextStyle(
                   fontSize: 9.2,
                   fontWeight: FontWeight.w600,
@@ -247,6 +247,11 @@ class _ExpandPillButton extends StatelessWidget {
                   fontFeatures: AmpelTheme.tabularFigures,
                   height: 1.1,
                 ),
+              ),
+              Icon(
+                isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                size: 12,
+                color: AppConstants.accentAntigravity,
               ),
             ],
           ),

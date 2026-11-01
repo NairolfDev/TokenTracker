@@ -20,6 +20,8 @@ import 'package:agentlights/services/usage/antigravity_usage_service.dart';
 import 'package:agentlights/services/usage/claude_usage_service.dart';
 import 'package:agentlights/services/usage/usage_cache_service.dart';
 import 'package:agentlights/ui/screens/ampel_hud_screen.dart';
+import 'package:agentlights/ui/screens/phone_home_screen.dart';
+import 'package:agentlights/ui/widgets/connections_panel.dart';
 import 'package:agentlights/ui/widgets/agent_logo_widget.dart';
 import 'package:agentlights/ui/widgets/antigravity_limits_drawer.dart';
 import 'package:agentlights/ui/widgets/depleting_usage_ring.dart';
@@ -734,7 +736,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(AntigravityLimitsDrawer), findsOneWidget);
-      expect(find.textContaining('▾ Alle'), findsNothing); // drawer is always open, no pill
+      expect(find.textContaining('Alle ('), findsNothing); // drawer is always open, no pill
       expect(tester.takeException(), isNull);
     });
 
@@ -777,7 +779,7 @@ void main() {
         expect(find.byType(DepletingUsageRing), findsWidgets);
 
         // Verify the Antigravity expand pill (`▾ Alle (6)`) is present and tap it
-        final expandPill = find.textContaining('▾ Alle');
+        final expandPill = find.textContaining('Alle (');
         expect(expandPill, findsOneWidget);
 
         await tester.tap(expandPill);
@@ -785,7 +787,7 @@ void main() {
 
         expect(controller.isAntigravityExpanded, isTrue);
         expect(find.byType(AntigravityLimitsDrawer), findsOneWidget);
-        expect(find.textContaining('▴ Alle'), findsOneWidget);
+        expect(find.byIcon(Icons.expand_less_rounded), findsOneWidget);
         expect(
           find.textContaining('Google Antigravity · Alle Modell- & Zeitfenster-Kontingente'),
           findsOneWidget,
@@ -911,5 +913,38 @@ void claudePlanUsageTest() {
     expect(cmd, endsWith('-o nul || exit 0'));
     expect(cmd, isNot(contains('exit /b')));
     expect(cmd, isNot(contains('>nul')));
+    expect(cmd, contains('--connect-timeout 1 --max-time 2'));
+    final merged = HookInstallerService.mergeHooksIntoConfig({}, agentId: 'claude', isWindows: true);
+    final hook = (merged['hooks']['Stop'] as List).first['hooks'].first as Map;
+    expect(hook['async'], true);
+    expect(hook['timeout'], 3);
+  });
+
+  testWidgets('Phone layout shows a tab bar, cards without overflow and the Verbindungen tab', (tester) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final controller = AmpelController(
+      autoUpdaterService: AutoUpdaterService(
+        httpClient: MockClient((_) async => http.Response('{"tag_name":"v1.0.0"}', 200)),
+        autoStart: false,
+      ),
+    );
+    addTearDown(controller.dispose);
+    await controller.setDemoMode(true);
+
+    await tester.pumpWidget(MaterialApp(home: PhoneHomeScreen(controller: controller)));
+    await tester.pumpAndSettle();
+    expect(find.text('Agent Lights'), findsOneWidget);
+    expect(find.textContaining('Claude'), findsWidgets);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('Verbindungen'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ConnectionsPanel), findsOneWidget);
+    expect(find.text('Dienste'), findsOneWidget);
+    expect(find.textContaining('Claude'), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 }

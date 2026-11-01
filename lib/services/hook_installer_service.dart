@@ -49,10 +49,10 @@ class HookInstallerService {
     if (isWindows) {
       final escapedJson =
           '{\\"agent\\":\\"$agent\\",\\"event\\":\\"$event\\",\\"detail\\":\\"$detail\\"}';
-      return 'curl.exe -s -m 1 -X POST $_hookEndpoint -H "Content-Type: application/json" -d "$escapedJson" -o nul || exit 0';
+      return 'curl.exe -s --connect-timeout 1 --max-time 2 -X POST $_hookEndpoint -H "Content-Type: application/json" -d "$escapedJson" -o nul || exit 0';
     } else {
       final rawJson = '{"agent":"$agent","event":"$event","detail":"$detail"}';
-      return 'curl -s -m 1 -X POST $_hookEndpoint -H "Content-Type: application/json" -d \'$rawJson\' >/dev/null 2>&1 || true';
+      return 'curl -s --connect-timeout 1 --max-time 2 -X POST $_hookEndpoint -H "Content-Type: application/json" -d \'$rawJson\' >/dev/null 2>&1 || true';
     }
   }
 
@@ -127,6 +127,9 @@ class HookInstallerService {
           {
             'type': 'command',
             'command': cmd,
+            // async + timeout: a status ping must never block or loop the agent
+            'timeout': 3,
+            'async': true,
           },
         ],
       };

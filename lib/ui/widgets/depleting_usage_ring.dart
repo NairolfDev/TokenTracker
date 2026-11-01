@@ -11,6 +11,9 @@ class DepletingUsageRing extends StatelessWidget {
   final bool showLabels;
   final bool compact;
 
+  /// Caption size under the ring (phones need at least 11 pt); the reset line is one point smaller.
+  final double? labelSize;
+
   const DepletingUsageRing({
     super.key,
     required this.window,
@@ -18,6 +21,7 @@ class DepletingUsageRing extends StatelessWidget {
     this.strokeWidth = 3.4,
     this.showLabels = true,
     this.compact = true,
+    this.labelSize,
   });
 
   @override
@@ -97,7 +101,7 @@ class DepletingUsageRing extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: compact ? 9.5 : 10.5,
+              fontSize: labelSize ?? (compact ? 9.5 : 10.5),
               fontWeight: FontWeight.w600,
               color: isCritical
                   ? AppConstants.ringCritical
@@ -111,7 +115,7 @@ class DepletingUsageRing extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: compact ? 8.5 : 9.5,
+              fontSize: labelSize != null ? labelSize! - 1 : (compact ? 8.5 : 9.5),
               fontWeight: FontWeight.w500,
               color: AmpelTheme.textMuted,
               fontFeatures: AmpelTheme.tabularFigures,

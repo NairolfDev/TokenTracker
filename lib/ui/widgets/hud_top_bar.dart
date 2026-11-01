@@ -4,6 +4,7 @@ import '../../controllers/ampel_controller.dart';
 import '../../models/app_constants.dart';
 import '../../services/platform/platform_bridge.dart';
 import '../theme/ampel_theme.dart';
+import 'connections_panel.dart';
 
 class HudTopBar extends StatefulWidget {
   final AmpelController controller;
@@ -210,6 +211,18 @@ class _HudTopBarState extends State<HudTopBar> {
               ),
             ),
           ],
+
+          // Connections / sign-in overview
+          const SizedBox(width: 2),
+          _TopBarIconButton(
+            tooltip: 'Verbindungen & Anmeldung',
+            onTap: () => ConnectionsDialog.show(context, controller),
+            child: const Icon(
+              Icons.link_rounded,
+              size: 15,
+              color: AmpelTheme.textSecondary,
+            ),
+          ),
 
           // Settings Gear Button
           const SizedBox(width: 2),

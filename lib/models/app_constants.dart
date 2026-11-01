@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 class AppConstants {
   AppConstants._();
 
+  /// Below this width on mobile/web the phone layout (tab bar, one card per agent) is used.
+  static const double phoneLayoutWidth = 600;
   static const String appTitle = 'Agent Lights';
   static const String appPackageName = 'agentlights';
   static const String githubOwner = 'NairolfDev';
