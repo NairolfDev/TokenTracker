@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../controllers/ampel_controller.dart';
 import '../../models/app_constants.dart';
@@ -101,10 +103,26 @@ class ConnectionsPanel extends StatelessWidget {
               style: TextStyle(fontSize: 15, height: 1.35, color: AmpelTheme.textSecondary),
             ),
             const SizedBox(height: 20),
-            if (!PlatformBridge.isDesktop) ...[
-              _SectionTitle('Desktop verbinden'),
-              _PairCard(controller: controller),
+            if (PlatformBridge.isDesktop) ...[
+              _SectionTitle('Handy verbinden'),
+              _RemoteAccessCard(controller: controller),
               const SizedBox(height: 20),
+            ] else ...[
+              _SectionTitle('Desktop verbinden'),
+              _JoinCard(controller: controller),
+              const SizedBox(height: 10),
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 4),
+                  title: const Text(
+                    'Im selben WLAN (Adresse eingeben)',
+                    style: TextStyle(fontSize: 14, color: AmpelTheme.textSecondary),
+                  ),
+                  children: [_PairCard(controller: controller)],
+                ),
+              ),
+              const SizedBox(height: 10),
             ],
             _SectionTitle('Dienste'),
             for (final s in _services) ...[
@@ -322,6 +340,158 @@ class _ServiceTile extends StatelessWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Desktop: shows the QR code. Scanning it with the phone camera opens the web app, already paired.
+class _RemoteAccessCard extends StatelessWidget {
+  final AmpelController controller;
+  const _RemoteAccessCard({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = controller;
+    final on = c.remoteAccessEnabled;
+    return _CardShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text(
+              'Fernzugriff per QR-Code',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AmpelTheme.textPrimary),
+            ),
+            subtitle: const Text(
+              'Zeigt deinen Status auf dem Handy, auch außerhalb deines WLANs.',
+              style: TextStyle(fontSize: 14, color: AmpelTheme.textSecondary),
+            ),
+            value: on,
+            onChanged: (v) => c.setRemoteAccess(v),
+          ),
+          if (on) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                child: QrImageView(data: c.pairUrl, size: 200, backgroundColor: Colors.white),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Handy-Kamera auf den Code richten und den Link öffnen. Fertig: Agent Lights im Browser ist verbunden.',
+              style: TextStyle(fontSize: 14, height: 1.35, color: AmpelTheme.textSecondary),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
+                  onPressed: () => Clipboard.setData(ClipboardData(text: c.pairUrl)),
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  label: const Text('Link kopieren'),
+                ),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
+                  onPressed: () => c.setRemoteAccess(true, renew: true),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('Neuen Code erzeugen'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Übertragen werden nur Status und Prozentwerte, über den Dienst ntfy.sh unter einem '
+              'geheimen Zufallsnamen. Mit "Neuen Code erzeugen" sperrst du alle bisherigen Handys aus.',
+              style: TextStyle(fontSize: 12, height: 1.35, color: AmpelTheme.textMuted),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Phone/web: pair with the desktop by pasting the link or code from the QR code.
+class _JoinCard extends StatefulWidget {
+  final AmpelController controller;
+  const _JoinCard({required this.controller});
+
+  @override
+  State<_JoinCard> createState() => _JoinCardState();
+}
+
+class _JoinCardState extends State<_JoinCard> {
+  final TextEditingController _code = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.controller;
+    final paired = c.pairedByCode;
+    return _CardShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            paired ? 'Mit deinem Desktop verbunden' : 'Noch nicht verbunden',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: paired ? AppConstants.ampelGreen : AmpelTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Am Desktop in Agent Lights unter Verbindungen den Fernzugriff einschalten. '
+            'Dann den QR-Code mit der Kamera dieses Handys scannen. Das geht von überall, nicht nur im WLAN.',
+            style: TextStyle(fontSize: 14, height: 1.35, color: AmpelTheme.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _code,
+            autocorrect: false,
+            style: const TextStyle(fontSize: 17, color: AmpelTheme.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Link oder Code einfügen',
+              errorText: _error,
+              filled: true,
+              fillColor: AppConstants.bgWell,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton(
+              onPressed: () async {
+                final ok = await c.joinWithCode(_code.text);
+                setState(() => _error = ok ? null : 'Das ist kein gültiger Code.');
+              },
+              child: const Text('Verbinden'),
+            ),
+          ),
+          if (paired) ...[
+            const SizedBox(height: 4),
+            TextButton(
+              style: TextButton.styleFrom(minimumSize: const Size(0, 44)),
+              onPressed: c.leaveRemote,
+              child: const Text('Verbindung trennen'),
+            ),
+          ],
         ],
       ),
     );

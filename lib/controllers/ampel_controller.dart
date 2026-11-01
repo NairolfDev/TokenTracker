@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/agent_status.dart';
@@ -12,6 +13,7 @@ import '../services/platform/platform_bridge.dart';
 import '../services/usage/antigravity_usage_service.dart';
 import '../models/custom_agent.dart';
 import '../services/notification_service.dart';
+import '../services/relay_sync_service.dart';
 import '../services/usage/claude_usage_service.dart';
 import '../services/usage/codex_usage_service.dart';
 import '../services/usage/usage_cache_service.dart';
@@ -41,6 +43,15 @@ class AmpelController extends ChangeNotifier {
   Timer? _usagePollTimer;
   Timer? _activityWatchTimer;
 
+  // Remote pairing (QR code): the desktop publishes, phones and the web app read.
+  final RelaySyncService relay = RelaySyncService();
+  bool _remoteAccess = false;
+  String _pairSecret = '';
+  String _joinSecret = '';
+  Timer? _relayTimer;
+  DateTime _lastRelayPublish = DateTime.fromMillisecondsSinceEpoch(0);
+  String _lastRelayBody = '';
+
   AmpelController({
     AntigravityUsageService? antigravityService,
     CodexUsageService? codexService,
@@ -57,6 +68,7 @@ class AmpelController extends ChangeNotifier {
             autoUpdaterService ?? AutoUpdaterService(autoStart: false) {
     _initDefaultAgents();
     addListener(_notifyOnRedTransition);
+    addListener(_scheduleRelayPublish);
 
     this.autoUpdaterService.addListener(_onAutoUpdaterChanged);
     onUpdateCheckTriggered = () => checkForUpdates(silent: false);
@@ -119,6 +131,11 @@ class AmpelController extends ChangeNotifier {
   bool get isAntigravityExpanded => _isAntigravityExpanded;
   bool get bindLanServer => _bindLanServer;
   String get remoteSyncHost => _remoteSyncHost;
+  bool get remoteAccessEnabled => _remoteAccess;
+  bool get pairedByCode => _joinSecret.isNotEmpty;
+
+  /// Link inside the QR code: opens the web app, which pairs itself from the fragment.
+  String get pairUrl => 'https://agent-lights.web.app/#pair=$_pairSecret';
   bool get demoMode => _demoMode;
   String get statusBannerMessage => _statusBannerMessage;
   bool get isHookServerRunning => hookServerService.isRunning;
@@ -244,6 +261,17 @@ class AmpelController extends ChangeNotifier {
       _bindLanServer = prefs.getBool('bind_lan_server') ?? false;
       _remoteSyncHost = prefs.getString('remote_sync_host') ?? '';
       _demoMode = prefs.getBool('demo_mode') ?? PlatformBridge.isWeb;
+      _remoteAccess = prefs.getBool('remote_access') ?? false;
+      _pairSecret = prefs.getString('pair_secret') ?? '';
+      _joinSecret = prefs.getString('join_secret') ?? '';
+      // The QR link opens the web app as `.../#pair=SECRET`.
+      final linked = PlatformBridge.isWeb ? RelaySyncService.parseSecret(Uri.base.fragment) : null;
+      if (linked != null) {
+        _joinSecret = linked;
+        _demoMode = false;
+        await prefs.setString('join_secret', linked);
+        await prefs.setBool('demo_mode', false);
+      }
       await _loadCustomAgents(prefs);
     } catch (_) {}
 
@@ -258,6 +286,9 @@ class AmpelController extends ChangeNotifier {
       _applyHookInstallResult(installRes);
     } else if (_remoteSyncHost.isNotEmpty) {
       await hookServerService.connectToRemoteHost(_remoteSyncHost);
+    }
+    if (_joinSecret.isNotEmpty) {
+      relay.startPolling(_joinSecret, _applyRemoteStatusSnapshot);
     }
 
     // 3. Perform live usage poll in background
@@ -721,6 +752,91 @@ class AmpelController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Pairs this phone/web app with a desktop from a scanned link, `pair=SECRET` or the bare code.
+  Future<bool> joinWithCode(String input) async {
+    final secret = RelaySyncService.parseSecret(input);
+    if (secret == null) return false;
+    _joinSecret = secret;
+    _demoMode = false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('join_secret', secret);
+      await prefs.setBool('demo_mode', false);
+    } catch (_) {}
+    relay.startPolling(secret, _applyRemoteStatusSnapshot);
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> leaveRemote() async {
+    _joinSecret = '';
+    relay.stop();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('join_secret');
+    } catch (_) {}
+    notifyListeners();
+  }
+
+  /// Desktop: starts or stops publishing the status for paired phones. [renew] makes a new code and
+  /// thereby cuts off every phone that used the old one.
+  Future<void> setRemoteAccess(bool enabled, {bool renew = false}) async {
+    _remoteAccess = enabled;
+    if (enabled && (_pairSecret.isEmpty || renew)) _pairSecret = RelaySyncService.newSecret();
+    _lastRelayBody = '';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('remote_access', enabled);
+      await prefs.setString('pair_secret', _pairSecret);
+    } catch (_) {}
+    notifyListeners();
+    if (enabled) unawaited(_publishRelay());
+  }
+
+  void _scheduleRelayPublish() {
+    if (!_remoteAccess || !PlatformBridge.isDesktop || _pairSecret.isEmpty) return;
+    if (_relayTimer?.isActive ?? false) return;
+    _relayTimer = Timer(const Duration(seconds: 3), _publishRelay);
+  }
+
+  /// Snapshot without the bulky per-model lists so it fits one message.
+  String _compactSnapshotBody() {
+    var snap = buildStatusSnapshotJson();
+    var body = jsonEncode(snap);
+    if (utf8.encode(body).length > RelaySyncService.maxBodyBytes) {
+      snap = {
+        ...snap,
+        'agents': {
+          for (final e in (snap['agents'] as Map).entries)
+            e.key: {
+              for (final f in (e.value as Map).entries)
+                if (f.key != 'all_antigravity_sub_limits') f.key: f.value,
+            },
+        },
+      };
+      body = jsonEncode(snap);
+    }
+    return body;
+  }
+
+  Future<void> _publishRelay() async {
+    if (!_remoteAccess || _pairSecret.isEmpty) return;
+    final body = _compactSnapshotBody();
+    // Changes only (ignoring the timestamp), at most once a minute (ntfy.sh allows 250 messages per 12 h), plus a heartbeat every 10 minutes.
+    final stripped = body.replaceAll(RegExp(r'"timestamp":"[^"]*"'), '');
+    final now = DateTime.now();
+    final since = now.difference(_lastRelayPublish);
+    if (stripped == _lastRelayBody && since < const Duration(minutes: 10)) return;
+    if (since < const Duration(seconds: 60)) {
+      _relayTimer = Timer(const Duration(seconds: 60) - since, _publishRelay);
+      return;
+    }
+    if (await relay.publish(_pairSecret, body)) {
+      _lastRelayBody = stripped;
+      _lastRelayPublish = now;
+    }
+  }
+
   Future<void> setDemoMode(bool enabled) async {
     _demoMode = enabled;
     try {
@@ -834,6 +950,8 @@ class AmpelController extends ChangeNotifier {
   void dispose() {
     _usagePollTimer?.cancel();
     _activityWatchTimer?.cancel();
+    _relayTimer?.cancel();
+    relay.stop();
     autoUpdaterService.removeListener(_onAutoUpdaterChanged);
     autoUpdaterService.dispose();
     unawaited(hookServerService.stop());

@@ -48,8 +48,11 @@ There are no accounts. The desktop app reads what your agents already keep on yo
 
 Nothing is sent to any server. Tokens and logins never leave your computer.
 
-**Phone and web:** these show the desktop's live status. In the mobile app open *Settings → Sync host* and enter your desktop's address
-(the desktop must allow LAN access). A page served over `https://` cannot open the desktop's `ws://` socket, so the hosted web app runs in demo mode.
+**Phone and web (works from anywhere):** on the desktop open *Verbindungen* and switch on *Fernzugriff per QR-Code*.
+Scan the QR code with your phone camera: it opens Agent Lights in the browser, already paired. In the Android app,
+paste the link or code under *Verbindungen* instead. Only agent states and percentages are sent, through a public
+[ntfy.sh](https://ntfy.sh) topic named after a random secret that only the QR code contains. *Neuen Code erzeugen* locks out every phone that used the old one.
+Without pairing (or in the same Wi-Fi) you can still enter the desktop's address manually.
 
 ## Report status from your own agent
 

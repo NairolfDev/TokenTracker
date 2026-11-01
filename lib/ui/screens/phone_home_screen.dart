@@ -81,7 +81,9 @@ class _StatusTab extends StatelessWidget {
       builder: (context, _) {
         final c = controller;
         final String hint;
-        if (c.demoMode) {
+        if (c.pairedByCode) {
+          hint = 'Live von deinem Desktop (per QR-Code verbunden).';
+        } else if (c.demoMode) {
           hint = 'Demo-Daten. Verbinde deinen Desktop unter „Verbindungen“.';
         } else if (c.remoteSyncHost.isNotEmpty) {
           hint = 'Live von ${c.remoteSyncHost}';

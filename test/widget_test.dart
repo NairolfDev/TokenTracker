@@ -21,6 +21,7 @@ import 'package:agentlights/services/usage/claude_usage_service.dart';
 import 'package:agentlights/services/usage/usage_cache_service.dart';
 import 'package:agentlights/ui/screens/ampel_hud_screen.dart';
 import 'package:agentlights/ui/screens/phone_home_screen.dart';
+import 'package:agentlights/services/relay_sync_service.dart';
 import 'package:agentlights/ui/widgets/connections_panel.dart';
 import 'package:agentlights/ui/widgets/agent_logo_widget.dart';
 import 'package:agentlights/ui/widgets/antigravity_limits_drawer.dart';
@@ -946,5 +947,29 @@ void claudePlanUsageTest() {
     expect(find.text('Dienste'), findsOneWidget);
     expect(find.textContaining('Claude'), findsWidgets);
     expect(tester.takeException(), isNull);
+  });
+
+  test('Relay: QR link, bare code and garbage are parsed; publish then fetch round-trips', () async {
+    final secret = RelaySyncService.newSecret();
+    expect(secret.length, 22);
+    expect(RelaySyncService.parseSecret('https://agent-lights.web.app/#pair=$secret'), secret);
+    expect(RelaySyncService.parseSecret('pair=$secret'), secret);
+    expect(RelaySyncService.parseSecret(' $secret '), secret);
+    expect(RelaySyncService.parseSecret('hallo'), isNull);
+
+    String? stored;
+    final client = MockClient((req) async {
+      if (req.method == 'POST') {
+        expect(req.url.path, '/agentlights-$secret');
+        stored = req.body;
+        return http.Response('{}', 200);
+      }
+      return http.Response(jsonEncode({'id': 'a1', 'event': 'message', 'message': stored}), 200);
+    });
+    final relay = RelaySyncService(client: client);
+    expect(await relay.publish(secret, jsonEncode({'agents': {}})), isTrue);
+    expect((await relay.fetchLatest(secret))!['agents'], isA<Map>());
+    expect(await relay.fetchLatest(secret), isNull); // same message id is not delivered twice
+    expect(await relay.publish(secret, 'x' * 4000), isFalse); // too large for one message
   });
 }
