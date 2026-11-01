@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -6,6 +7,7 @@ import '../../controllers/ampel_controller.dart';
 import '../../models/app_constants.dart';
 import '../../models/custom_agent.dart';
 import '../../services/platform/platform_bridge.dart';
+import '../screens/pair_scanner_screen.dart';
 import '../theme/ampel_theme.dart';
 
 class _Service {
@@ -457,10 +459,27 @@ class _JoinCardState extends State<_JoinCard> {
           const SizedBox(height: 6),
           const Text(
             'Am Desktop in Agent Lights unter Verbindungen den Fernzugriff einschalten. '
-            'Dann den QR-Code mit der Kamera dieses Handys scannen. Das geht von überall, nicht nur im WLAN.',
+            'Dann hier auf „QR-Code scannen“ tippen. Das geht von überall, nicht nur im WLAN.',
             style: TextStyle(fontSize: 14, height: 1.35, color: AmpelTheme.textSecondary),
           ),
           const SizedBox(height: 12),
+          if (!kIsWeb &&
+              (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => PairScannerScreen(controller: c)),
+                ),
+                icon: const Icon(Icons.qr_code_scanner_rounded),
+                label: const Text('QR-Code scannen'),
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text('oder Link einfügen', style: TextStyle(fontSize: 13, color: AmpelTheme.textMuted)),
+            const SizedBox(height: 8),
+          ],
           TextField(
             controller: _code,
             autocorrect: false,
