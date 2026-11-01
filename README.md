@@ -46,7 +46,7 @@ There are no accounts. The desktop app reads what your agents already keep on yo
   Your old setting is kept in `~/.claude/agent-lights-statusline.prev` and `settings.json.bak`.
   The numbers refresh whenever a Claude Code session is running; until then the last known values are shown.
 
-Nothing is sent to any server. Tokens and logins never leave your computer.
+Tokens and logins never leave your computer. Nothing is sent anywhere unless you switch on the QR pairing below.
 
 **Phone and web (works from anywhere):** on the desktop open *Verbindungen* and switch on *Fernzugriff per QR-Code*.
 Scan the QR code with your phone camera: it opens Agent Lights in the browser, already paired. In the Android app,

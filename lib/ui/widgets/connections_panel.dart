@@ -204,7 +204,8 @@ class _CardShell extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppConstants.borderSubtle),
         ),
-        child: child,
+        // Tiles inside need a Material between them and the card's own background.
+        child: Material(type: MaterialType.transparency, child: child),
       );
 }
 
