@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/agent_status.dart';
@@ -749,6 +750,12 @@ class AmpelController extends ChangeNotifier {
   }
 
   /// Pairs this phone/web app with a desktop from a scanned link, `pair=SECRET` or the bare code.
+  /// Asks the Android home-screen widget to reload (no-op on every other platform).
+  void _refreshAndroidWidget() {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    unawaited(const MethodChannel('agentlights/widget').invokeMethod('refresh').catchError((_) {}));
+  }
+
   Future<bool> joinWithCode(String input) async {
     final secret = RelaySyncService.parseSecret(input);
     if (secret == null) return false;
@@ -862,6 +869,7 @@ class AmpelController extends ChangeNotifier {
   void _applyRemoteStatusSnapshot(Map<String, dynamic> snapshot) {
     final agentsMap = snapshot['agents'];
     if (agentsMap is! Map) return;
+    _refreshAndroidWidget();
     var updated = false;
     for (final entry in agentsMap.entries) {
       if (entry.key.toString().startsWith('custom:') && entry.value is Map) {
