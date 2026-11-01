@@ -934,6 +934,7 @@ void claudePlanUsageTest() {
       windows: [UsageWindow(key: 'five_hour', title: '5 Stunden', customQuotaLabel: '12.1M Tokens')],
     );
     expect(a.effectiveSubtitle, contains('Limit unbekannt'));
+    expect(a.primaryWindows, isEmpty);
   });
 
   testWidgets('Phone layout shows a tab bar, cards without overflow and the Verbindungen tab', (tester) async {

@@ -38,7 +38,7 @@ class _AgentRowCardState extends State<AgentRowCard> {
     final isAntigravity = agent.agentType == AgentType.antigravity;
     final trafficState = agent.trafficLight;
     final primaryWindows =
-        widget.large && !isAntigravity ? agent.windows : agent.primaryWindows;
+        widget.large && !isAntigravity && !agent.tokenOnly ? agent.windows : agent.primaryWindows;
     final totalSubLimitsCount = agent.allAntigravitySubLimits.isNotEmpty
         ? agent.allAntigravitySubLimits.length
         : agent.windows.length;

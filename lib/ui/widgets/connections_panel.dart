@@ -31,8 +31,8 @@ class _Service {
 final List<_Service> _services = [
   _Service(
     name: 'Claude Code',
-    how: 'Liest deine echten 5-Stunden- und Wochen-Limits aus Claude Code. '
-        'Starte dafür einmal eine Claude-Code-Sitzung auf dem Desktop.',
+    how: 'Für echte 5-Stunden- und Wochen-Prozente muss die Claude-Code-Konsole angemeldet sein: '
+        'im Terminal "claude" starten und /login eingeben. Die Claude-Desktop-App allein reicht nicht.',
     url: 'https://claude.ai/settings/usage',
     color: AppConstants.accentClaude,
     connected: (c) => c.claudeStatus.authenticated && c.claudeStatus.windows.any((w) => w.usedPercent != null),

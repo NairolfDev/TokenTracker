@@ -249,19 +249,26 @@ class AgentStatusModel {
       return TrafficLightState.outOfUsage.defaultSubtitle;
     }
     final base = subtitle.isNotEmpty ? subtitle : trafficLight.defaultSubtitle;
-    if (agentType == AgentType.claude &&
-        trafficLight == TrafficLightState.idle &&
-        windows.isNotEmpty &&
-        windows.every((w) => w.usedPercent == null)) {
-      return 'Bereit · Limit unbekannt (nur Token-Zähler)';
+    if (tokenOnly && trafficLight == TrafficLightState.idle) {
+      final tokens = windows
+          .map((w) => '${w.customQuotaLabel?.replaceAll(' Tokens', '')} ${w.shortLabel}')
+          .join(' · ');
+      return 'Limit unbekannt (nicht angemeldet) · $tokens';
     }
     return base;
   }
+
+  /// Claude without a signed-in limit source: only locally counted tokens, no percentages.
+  bool get tokenOnly =>
+      agentType == AgentType.claude &&
+      windows.isNotEmpty &&
+      windows.every((w) => w.usedPercent == null);
 
   /// Primary Usage Windows shown in Zone 3 of the compact card:
   /// - For Codex and Claude: up to 3 rings (`5h`, `Week`, `Month` if available).
   /// - For Antigravity in collapsed mode: the tightest ring (lowest `remainingFraction`) + the second most important ring.
   List<UsageWindow> get primaryWindows {
+    if (tokenOnly) return const [];
     if (agentType != AgentType.antigravity) {
       return windows.take(3).toList();
     }
