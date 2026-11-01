@@ -48,7 +48,7 @@ class DesktopIntegrationService with WindowListener, TrayListener {
           AppConstants.hudCollapsedWidth,
           AppConstants.hudCollapsedHeight,
         ),
-        minimumSize: Size(480, 235),
+        minimumSize: Size(480, 300),
         center: true,
         backgroundColor: Colors.transparent,
         skipTaskbar: false,

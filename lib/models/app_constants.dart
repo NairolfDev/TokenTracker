@@ -37,11 +37,11 @@ class AppConstants {
   static const Color accentClaude = Color(0xFFCC8D6B);
 
   // Compact HUD Dimensions
-  static const double hudCollapsedWidth = 500.0;
+  static const double hudCollapsedWidth = 540.0;
   /// Windows at least this wide (large desktop window, tablet, web) use the large layout.
   static const double largeLayoutWidth = 720.0;
   static const double hudLargeWidth = 920.0;
   static const double hudLargeHeight = 680.0;
-  static const double hudCollapsedHeight = 250.0;
-  static const double hudExpandedHeight = 390.0;
+  static const double hudCollapsedHeight = 372.0;
+  static const double hudExpandedHeight = 520.0;
 }
