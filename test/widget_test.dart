@@ -925,6 +925,57 @@ void claudePlanUsageTest() {
     }
   });
 
+  test('Antigravity 2.28 payload: Gemini, Claude/GPT (weekly hit, 5h disabled) and Argon weekly-only', () {
+    final stats = antigravityUsage({
+      'response': {
+        'groups': [
+          {
+            'displayName': 'Gemini Models',
+            'buckets': [
+              {'bucketId': 'gemini-weekly', 'window': 'weekly', 'remainingFraction': 0.973175, 'resetTime': '2026-11-07T11:48:36Z'},
+              {'bucketId': 'gemini-5h', 'window': '5h', 'remainingFraction': 0.9867798, 'resetTime': '2026-11-01T17:43:58Z'},
+            ],
+          },
+          {
+            'displayName': 'Claude and GPT models',
+            'buckets': [
+              {'bucketId': '3p-weekly', 'window': 'weekly', 'remainingFraction': 0, 'resetTime': '2026-11-01T16:45:22Z'},
+              {'bucketId': '3p-5h', 'window': '5h', 'remainingFraction': 1, 'disabled': true, 'resetTime': '2026-11-01T18:13:47Z'},
+            ],
+          },
+          {
+            'displayName': 'Gemini 4 Argon',
+            'buckets': [
+              {'bucketId': 'gemini-argon-wtu-weekly', 'window': 'weekly', 'remainingFraction': 0.09502867, 'resetTime': '2026-11-06T17:21:39Z'},
+            ],
+          },
+        ],
+      },
+    })!;
+    final byKey = {for (final w in stats.subLimits) w.key: w};
+    expect(byKey['gemini_seven_day']!.remainingPercent!.round(), 97);
+    expect(byKey['claude_gpt_seven_day']!.remainingPercent, 0);
+    expect(byKey['claude_gpt_five_hour']!.disabled, true);
+    final argon = stats.subLimits.firstWhere((w) => w.group == 'Gemini 4 Argon');
+    expect(argon.remainingPercent!.round(), 10);
+  });
+
+  test('Antigravity quota port is found from loopback connections when it is not listed as LISTENING', () {
+    const cmd = r'xntigravity\resources\bin\language_server.exe --override_ide_name antigravity --https_server_port 0 --csrf_token abcdefgh12345678';
+    final servers = serversFromProcesses(
+      [
+        {
+          'ProcessId': 7,
+          'ExecutablePath': r'C:\Users\u\AppData\Local\Programs\Antigravity\resources\bin\language_server.exe',
+          'CommandLine': cmd,
+        }
+      ],
+      '  TCP    127.0.0.1:58821        127.0.0.1:49352        ESTABLISHED     7\n'
+      '  TCP    192.168.1.2:51237      172.217.118.4:443      ESTABLISHED     7',
+    );
+    expect(servers.map((s) => s.port), [58821]);
+  });
+
   test('Claude without a known limit says so instead of showing broken rings', () {
     final a = AgentStatusModel(
       agentType: AgentType.claude,

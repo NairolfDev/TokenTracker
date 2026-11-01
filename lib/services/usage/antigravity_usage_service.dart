@@ -78,7 +78,11 @@ ProviderStats? antigravityUsage(Map<String, dynamic>? payload) {
       if (group is Map && group['buckets'] is List) {
         for (final b in (group['buckets'] as List).take(32)) {
           if (b is Map) {
-            buckets.add(Map<String, dynamic>.from(b));
+            buckets.add({
+              ...Map<String, dynamic>.from(b),
+              // A group holding only this one bucket (e.g. "Gemini 4 Argon") names it better than its id does.
+              if ((group['buckets'] as List).length == 1) 'groupName': group['displayName']?.toString(),
+            });
           }
         }
       }
@@ -103,6 +107,7 @@ ProviderStats? antigravityUsage(Map<String, dynamic>? payload) {
       final idSuffix = RegExp(r'[-_](5h|weekly)$').firstMatch(bucketId)?.group(1);
       final explicitModel = bucket['label'] ??
           bucket['modelName'] ??
+          bucket['groupName'] ??
           (idSuffix == null
               ? null
               : bucketId.replaceFirst(RegExp(r'[-_](5h|weekly)$'), '').replaceAll(RegExp(r'[-_]+'), ' '));
@@ -205,9 +210,9 @@ List<LocalServer> serversFromProcesses(Object? rows, String netstat) {
   for (final line in const LineSplitter().convert(netstat)) {
     final parts =
         line.trim().split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
-    if (parts.length != 5 || parts[0] != 'TCP' || parts[3] != 'LISTENING') {
-      continue;
-    }
+    if (parts.length != 5 || parts[0] != 'TCP') continue;
+    final loopbackLive = parts[3] == 'ESTABLISHED' && parts[1].startsWith('127.0.0.1:');
+    if (parts[3] != 'LISTENING' && !loopbackLive) continue;
     final pid = int.tryParse(parts[4]);
     final addr = parts[1];
     final colonIdx = addr.lastIndexOf(':');
